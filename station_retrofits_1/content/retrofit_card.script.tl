@@ -434,17 +434,12 @@ end
 
 -- A row 24 pixels high with its pieces at the left edge and one at the right; the base windows push items apart with the
 -- "horizontal-spacer" class (gui_react_util.makeHorizontalSpacer in gui/main/gui_react_util.tl). The tooltip covers the row.
--- With a middle piece, a spacer on each side of it centres it between the other two.
-local row = function(left : {TreeNodeId}, right : TreeNodeId, tooltip : string, middle? : TreeNodeId) : TreeNodeId
+local row = function(left : {TreeNodeId}, right : TreeNodeId, tooltip : string) : TreeNodeId
 	local styles = getDrawnStyles()
 	local children : {TreeNodeId} = {}
 	if styles ~= nil then children[1] = builtin.Component{ meta = { styleSheet = styles.rowHeight } } end
 	for _, node in ipairs(left) do children[#children + 1] = node end
 	children[#children + 1] = builtin.Component{ meta = { class = "horizontal-spacer" } }
-	if middle ~= nil then
-		children[#children + 1] = middle
-		children[#children + 1] = builtin.Component{ meta = { class = "horizontal-spacer" } }
-	end
 	children[#children + 1] = right
 	return builtin.Component{
 		meta = { tooltip = tooltip },
@@ -547,8 +542,9 @@ local buyButton = function(s : CardState, entry : Entry, tree : string) : TreeNo
 	local construction = entry.construction
 	return builtin.Button{
 		-- "primary" is the class the base game's dialog buttons use (gui/line_vehicle_mgmt/feedback_list_util.tl); its disabled
-		-- style greys the icon and the text (gui/main/default.css.lua).
-		meta = { class = "primary", enabled = enabled, tooltip = tooltip,
+		-- style greys the icon and the text (gui/main/default.css.lua). "station-retrofits-buy" gives every buy button the same
+		-- minimum width (retrofit_card.css.lua), so the rows line up.
+		meta = { class = "primary, station-retrofits-buy", enabled = enabled, tooltip = tooltip,
 			localKey = "station_retrofits_buy_" .. tostring(construction) .. "_" .. tree },
 		content = builtin.Component{ layout = builtin.BoxLayout{
 			orientation = builtin.type.Orientation.Horizontal,
@@ -586,9 +582,10 @@ local summaryRows = function(s : CardState) : {TreeNodeId}
 	return rows
 end
 
--- Expanded: per tree what the next level changes at the left, the upkeep the footer would show after it in the middle, and
--- the buy button at the right. The level number is left out for room (in game the row ran past the card's edge with it); the
--- tooltip gives the level.
+-- Expanded: per tree what the next level changes at the left, and at the right the upkeep the footer would show after it,
+-- then the buy button. The buttons share a minimum width, so the upkeep figures end in one column (centred between the two,
+-- they did not line up in game). The level number is left out for room (in game the row ran past the card's edge with it);
+-- the tooltip gives the level.
 local nextRows = function(s : CardState) : {TreeNodeId}
 	local rows : {TreeNodeId} = {}
 	for _, entry in ipairs(s.entries) do
@@ -607,13 +604,14 @@ local nextRows = function(s : CardState) : {TreeNodeId}
 				else
 					upkeep = text("?")
 				end
-				-- A gap before the button, so the upkeep never touches it when the row is full.
+				-- A gap between the upkeep and the button.
 				local styles = getDrawnStyles()
-				local buy = buyButton(s, entry, tree)
-				local right = styles ~= nil and builtin.BoxLayout{ orientation = builtin.type.Orientation.Horizontal,
-					children = { builtin.Component{ meta = { styleSheet = styles.buttonGap } }, buy } } or buy
-				rows[#rows + 1] = row({ icon(treeIcons[tree]), text(" " .. effectNext(entry, tree, nextLevel)) }, right,
-					tooltip .. "\nThe next level, level " .. tostring(nextLevel) .. ": what it changes, the upkeep after it and its price.", upkeep)
+				local right : {TreeNodeId} = { upkeep }
+				if styles ~= nil then right[#right + 1] = builtin.Component{ meta = { styleSheet = styles.buttonGap } } end
+				right[#right + 1] = buyButton(s, entry, tree)
+				rows[#rows + 1] = row({ icon(treeIcons[tree]), text(" " .. effectNext(entry, tree, nextLevel)) },
+					builtin.BoxLayout{ orientation = builtin.type.Orientation.Horizontal, children = right },
+					tooltip .. "\nThe next level, level " .. tostring(nextLevel) .. ": what it changes, the upkeep after it and its price.")
 			end
 		end
 	end
