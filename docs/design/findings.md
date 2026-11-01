@@ -91,7 +91,7 @@ Each of these held for depots and maintenance buildings in game; each needs a ch
 - Rebuilds the game starts (catenary, module edits through the depot's upgrade script) went through the wrapper and kept the levels.
 - `loadModule` modifiers are called by TF3 (Depot Retrofits wraps module update scripts with one). Probably not needed for stations, since the hook runs after the modules.
 - Upkeep: the construction's `MAINTENANCE_COST` component holds the script's `maintenanceCost`; the charged figure is that × the base config's `infrastructureMaintenanceScale` (`calcMaintenanceForSubconstruction`).
-- Charging: a `JournalEntry` of type `CONSTRUCTION`, booked with `makeJournalBookAssetCmd` from the game script. Depot Retrofits uses `JournalEntry.Construction.DEPOT`; the list (`scripts/journal.d.tl`) also has `STATION`, which the station buy uses (not yet seen in the Finances tab).
+- Charging: a `JournalEntry` of type `CONSTRUCTION`, booked with `makeJournalBookAssetCmd` from the game script. Depot Retrofits uses `JournalEntry.Construction.DEPOT`; the list (`scripts/journal.d.tl`) also has `STATION`, which the station buy uses. The Finances tab shows it under Investments, Infrastructure, whatever the carrier (buy test).
 - The game script's state is written from the simulation thread (`handleEvent`) and from about ten worker threads (`update`), each with its own copy; module variables do not persist. A pending buy counts as landed once the stored level is at least the bought one.
 - Rank: base `company_progression_util.tl` gives the claimed rank.
 
@@ -117,7 +117,6 @@ From a read-only survey of the station, catchment, capacity and emission script 
 7. Whether module edits, catenary swaps and the rail and street upgrade scripts keep the hidden params. (Probe 3.)
 8. Whether a kerbside stop (an edge object) can be replaced with new params. (Probe 4.)
 9. How much comfort and load speed change in play. Leave both out until measured.
-10. Which Finances row a level's price lands in: Investments has Roads, Tracks, Infrastructure, Warehouses and Vehicles, no Stations row. The charge itself is right (the earnings fell by the prices to the dollar).
 11. How stations from popular mods are shaped (whether they return a `station` table, use `terminateConstructionHook`, set `constructionType`).
 12. Whether the levels stack with other mods that change the same values. Read from their code (next section): they do if we wrap through `loadScript` and multiply the values we find; untested in game.
 
@@ -216,3 +215,13 @@ The `Deutschland 20` save copy as in the card tests, logLevel `"full"`, with the
   - Waiting passengers: as before each rebuild (the user watched; the waiting hall read 0 / 535 throughout).
   - A train just outside the platforms, on the station's own track, stepped back to the next track segment at the first rebuild, with the game paused, and stayed there through the next ten; a train at a platform did not move. As when a road segment is removed: the game moves a vehicle on a replaced edge onto an adjacent one.
   - The four Finances shots were taken before the first buy. Investments there has Roads, Tracks, Infrastructure, Warehouses and Vehicles, no Stations row; which row the charges went to is not seen yet.
+
+### 2026-11-01: buys on six stations
+
+A fresh load of the same `Deutschland 20` copy, logLevel `"full"`, with the three-part rows. Log: `local/logs/stdout-2026-11-01-buy3.txt`; 26 screenshots (18:04 to 18:10 local).
+
+- **70 buys, all charged once** at the price the card showed: Hannover Station Ost (rail, 13, RAIL), Hannover Station Umstieg (road station with tram tracks, 22, TRAM), Hannover Station Abzweigung (cargo rail, 9, RAIL), Köln Station Anbau (cargo road, 5, ROAD), Köln Station Ost (cargo road, 13, ROAD), Nürnberg Hafen (harbour, 8, WATER).
+- **Finances**: the charges land under Investments, Infrastructure. Its 3/69 to 5/69 figure grew by $119,521,852 by the first shot and $133,335,195 by the last, the sums of the logged prices at those times to the dollar; earnings fell by the same. The carrier shows nowhere there (Investments is not split by carrier).
+- **The three-part rows fit** on every station: effect at the left, upkeep in the middle, button at the right edge. At rank 13 a tree at level 13 shows a greyed "Rank 14" button, and its tooltip "Level 13/13 (max 15)".
+- **Harbours land slower.** Rail and road station rebuilds landed within a second of `buy sent`; the harbour's took 2 to 3 seconds (noise 3: sent 23:09:34, charged 23:09:37). The card waited 2 os.time ticks before calling a buy refused, so the "Not rebuilt" banner showed for a moment before four of the eight harbour levels landed (`card notRebuilt`, then the level). The game script gave up after 3 ticks: noise 3 was charged only because the landed check runs first. The card now waits 5 ticks and the game script 30 seconds.
+- The tram terminal's waiting hall read 283 / 70 before any buy (the base game's own overflow; untouched by the levels).

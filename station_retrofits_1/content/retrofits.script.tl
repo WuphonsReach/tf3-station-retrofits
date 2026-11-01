@@ -19,14 +19,15 @@ local buyEvent = "stationRetrofitsBuy"
 local dayClock = 4000
 -- A buy is charged when its rebuild lands: the stored level in its tree is at least the one bought, so a later buy landing
 -- first also counts. A new buy for the same station before then replaces it, uncharged: the card sends one buy at a time per
--- station and says after about a second that the game refused it, so a buy sent again after clearing the way must go
+-- station and says after a few seconds that the game refused it, so a buy sent again after clearing the way must go
 -- through. Both rebuild to the same level from the same stored levels, so at most one is charged. A rebuild that has not
--- landed after a game day, or after a few real seconds, is given up, uncharged: the game refused it. The real seconds count
--- while the game is paused, when game time stands still; a rebuild the game builds lands within a second (Depot Retrofits'
--- findings). The pending buy keeps only its tree and level, as in Depot Retrofits: pending buys that kept all the levels
--- were found holding the levels from before the buy in a run of quick buys.
+-- landed after a game day, or after 30 real seconds, is given up, uncharged: the game refused it. The real seconds count
+-- while the game is paused, when game time stands still. Rail and road stations land within a second, harbours in 2 to 3
+-- (docs/design/findings.md); Depot Retrofits' 3 seconds would have let a harbour keep a level uncharged, and waiting longer
+-- is safe, as only our own rebuild raises a stored level. The pending buy keeps only its tree and level, as in Depot
+-- Retrofits: pending buys that kept all the levels were found holding the levels from before the buy in a run of quick buys.
 local buyPendingClock = dayClock
-local buyPendingSeconds = 3
+local buyPendingSeconds = 30
 
 local record Buy
 	construction : Engine.Entity

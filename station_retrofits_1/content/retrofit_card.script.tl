@@ -158,7 +158,7 @@ end
 
 -- A buy is tried, not checked first, as in Depot Retrofits: the click sends it, and the game builds the rebuild or refuses
 -- it (when something built around the station since is in its way). The card remembers the levels it showed at the click;
--- when they have not changed about a second later, the game refused it (nothing is charged then), and the card says so
+-- when they have not changed a few seconds later, the game refused it (nothing is charged then), and the card says so
 -- until a level lands. A click while it shows keeps the warning up, so a retry the game refuses again does not make it
 -- blink; a buy sent again replaces the refused one in the game script. Kept per construction for the session, so the warning
 -- is still there when the window is opened again. Depot Retrofits also shows what is in the way, with the game's proposal
@@ -171,11 +171,12 @@ local record Try
 end
 local tries : {Engine.Entity : Try} = {}
 local refused : {Engine.Entity : string} = {} -- the levels when the buy was found refused; cleared by a new level
--- One to two seconds: two ticks of os.time, as the game API has no finer clock. One tick could come just after the click,
--- and the card's steps are no measure of time (Depot Retrofits' findings: at the fastest speed 45 steps passed before a
--- rebuild that landed in the same second). The step count is only for where os.time is not available.
-local refusedAfterSeconds = 2
-local refusedAfterSteps = 120
+-- Four to five seconds: five ticks of os.time, as the game API has no finer clock. Harbours took 2 to 3 seconds to land, so
+-- the two ticks Depot Retrofits waits showed the warning for a moment before each harbour level landed
+-- (docs/design/findings.md). The card's steps are no measure of time (Depot Retrofits' findings: at the fastest speed 45
+-- steps passed before a rebuild that landed in the same second); the step count is only for where os.time is not available.
+local refusedAfterSeconds = 5
+local refusedAfterSteps = 300
 local stepCount = 0
 -- Real time in whole seconds. Not os.clock: that is the process's processor time, summed over the game's threads.
 local clockNow = function() : number, boolean
