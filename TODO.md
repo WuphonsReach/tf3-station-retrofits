@@ -2,18 +2,18 @@
 
 ## In short
 
-- **Where it stands.** Design only: findings read from the base game's station scripts, a draft spec and a probe plan. No mod code, no GitHub repo, nothing tested in game.
-- **Next.** Ask the user the open decisions in [docs/design/spec.md](docs/design/spec.md) that block the probe (separate mod, name), set up the scaffolding, then build probe 1 ([docs/design/probe-plan.md](docs/design/probe-plan.md)).
+- **Where it stands.** Design, plus a mod scaffold that only logs its start-up line: findings read from the base game's station scripts, a draft spec and a probe plan. Nothing tested in game.
+- **Next.** Check in game that the scaffold loads (`STATION_RETROFITS version 0.1-dev` in the log), then build probe 1 ([docs/design/probe-plan.md](docs/design/probe-plan.md)). Decisions so far are in [docs/design/spec.md](docs/design/spec.md), "Decisions".
 
 ## Set-up
 
-- [ ] Confirm with the user: separate mod (not part of Depot Retrofits), name "Station Retrofits", folder `station_retrofits_1`, log prefix `STATION_RETROFITS`.
-- [ ] Check mod.io for a mod already called "Station Retrofits" (or close to it, as "Upgrades" was too close to Industry Upgrades for the depot mod).
-- [ ] Mod scaffolding, copied from Depot Retrofits (MIT, same author) and renamed: `mod.json` (`runScript` `mod.script@runFn`), `_metadata/modinfo.json`, `_content.json`, `content/settings.tl` (`logLevel`), `types/station_retrofits.d.tl`; uncomment the require in `all_def.tl`.
-- [ ] Tools and CI, copied and adapted: `tools/check_content_list.py`, `tools/check_repo.py`, `.github/workflows/checks.yml` (actions pinned to full SHAs; look them up again, do not copy stale ones without checking).
-- [ ] Copy `tlconfig.example.lua` to the gitignored `tlconfig.lua` and fill in the install folder (see `local/machine.md`), then `tl check` works.
-- [ ] Symlink `station_retrofits_1/` into the game's `staging_area/`.
-- [ ] GitHub repo (public, MIT, rulesets as Depot Retrofits: `main`, `pr-checks`, `trunks`, `version-tags`): only when the user says so. Until then, commits stay local.
+- [ ] Check mod.io for a mod already called "Station Retrofits" or close to it: the user, in a browser (the site's search needs JavaScript). A web search and the 630 cached listings in the local mod.io `state.json` found none; the closest names are "Industry Upgrades" and plain station assets.
+- [x] Mod scaffolding, copied from Depot Retrofits and renamed: `mod.json`, `_metadata/modinfo.json` (draft text), `_content.json`, `content/settings.tl`, and a `content/mod.script.tl` that only logs its start-up line.
+- [ ] `types/station_retrofits.d.tl` and the require in `all_def.tl`: with `levels.tl`, when there is something to type.
+- [x] Tools and CI, copied and adapted: `tools/check_content_list.py`, `tools/check_repo.py`, `.github/workflows/checks.yml` (checkout v7.0.1 and setup-python v7.1.0, still the latest releases on 2026-11-01).
+- [x] `tlconfig.lua` filled in on this machine; `tl check` passes.
+- [x] Symlink `station_retrofits_1/` into the game's `staging_area/`.
+- [x] GitHub repo, public, MIT, settings and rulesets as Depot Retrofits: `main`, `pr-checks`, `trunks`, `version-tags`.
 
 ## Probes ([docs/design/probe-plan.md](docs/design/probe-plan.md))
 

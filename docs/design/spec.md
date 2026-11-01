@@ -25,7 +25,7 @@ The two kinds of tree carry over from Depot Retrofits: four trees improve the st
 
 | Tree | Game value changed | Per level (draft) | At level 15 |
 |---|---|---|---|
-| Catchment radius | every circle in `station.catchmentAreas` | +5%, or at least +10 m | +75% |
+| Catchment radius | every circle in `station.catchmentAreas` | +3%, or at least +10 m | +45% |
 | Waiting capacity | `station.pool.capacity` and each terminal's capacity | +10%, or at least +1 | +150% |
 | Pollution | `metadata.emissions`, both states | −5% | −75% |
 | Noise | `metadata.emissions`, both states | −5% | −75% |
@@ -33,16 +33,16 @@ The two kinds of tree carry over from Depot Retrofits: four trees improve the st
 
 Notes:
 
-- **Catchment is the strongest tree.** It brings more town into reach of the station, so more passengers and cargo, which no depot tree does. The draft keeps the depot's +5% but may need a higher price than the depot radius tree. Base circles are small (50 to 250 m), so the 10 m floor matters for small side buildings.
+- **Catchment is the strongest tree.** It brings more town into reach of the station, so more passengers and cargo, which no depot tree does. So it has smaller steps than the depot radius tree (+3%, not +5%) and a higher price (share 0.20). Base circles are small (50 to 250 m), so the 10 m floor matters for small side buildings.
 - **Capacity lowers emissions too.** Station emissions slide toward the crowded state (2 × base) as waiting passengers and cargo fill the capacity, so on a busy station a capacity level also cuts pollution and noise.
 - **Left out for now: comfort and load speed.** Both are set in the same hook, but their effect is decided in the engine and unmeasured. Add them only after a test shows what a level does in play.
 
 ## Price and upkeep (draft, from Depot Retrofits)
 
 - **Build price.** 6 × the upkeep the game charges for the station now, divided by what its current levels do to the upkeep, rounded to $100. In 80 of 81 base station modules the price is exactly 6 × the upkeep, so this matches the modules' summed price.
-- **Level price.** Level *n* costs the tree's first-level share × the build price × 1.15^(*n*−1). Depot shares: 0.15 radius and vehicles, 0.12 noise, 0.08 pollution, 0.25 upkeep. Starting point here: 0.15 capacity, 0.12 noise, 0.08 pollution, 0.25 upkeep, and catchment at least 0.15, perhaps 0.20 (to decide).
+- **Level price.** Level *n* costs the tree's first-level share × the build price × 1.15^(*n*−1). Depot shares: 0.15 radius and vehicles, 0.12 noise, 0.08 pollution, 0.25 upkeep. Here: 0.20 catchment (decided: above the other trees), and as starting points 0.15 capacity, 0.12 noise, 0.08 pollution, 0.25 upkeep.
 - **Upkeep.** Each improving level adds a share of the base upkeep: 15% catchment and capacity, 10% noise, 5% pollution. The upkeep tree multiplies the total by (1 − 0.05 × levels).
-- **How upkeep is applied (open).** A modular station's script has no upkeep of its own; the game adds the modules' upkeep afterwards. Raising upkeep is easy: set the script's `maintenanceCost` to the extra amount. Cutting it needs a negative `maintenanceCost`, which probe 1 tests. If the game refuses it, drop the upkeep tree for modular stations and keep the improving trees' upkeep.
+- **How upkeep is applied (open).** A modular station's script has no upkeep of its own; the game adds the modules' upkeep afterwards. Raising upkeep is easy: set the script's `maintenanceCost` to the extra amount. Cutting it needs a negative `maintenanceCost`, which probe 1 tests. If the game refuses it, modular stations get no upkeep tree, and the improving trees still add their upkeep (decided).
 - **Modules added later.** As in Depot Retrofits, levels are not repriced when the station grows; the upkeep the levels add follows the modules. Big stations pay big prices, since the build price grows with the modules.
 
 ## Buying a level
@@ -55,10 +55,13 @@ Notes:
 
 As in Depot Retrofits: a tree's maximum level is the claimed company rank; no level can be bought while the rank cannot be read.
 
+## Decisions
+
+- A separate mod, not part of Depot Retrofits: own listing, own balance, a failure in one does not break the other.
+- Name "Station Retrofits", folder `station_retrofits_1`, log prefix `STATION_RETROFITS` (mod.io still to be checked for a clash).
+- Catchment is in: +3% per level, at least +10 m, first-level share 0.20.
+- Without a negative upkeep on modular stations: no upkeep tree there; the improving trees still add their upkeep.
+
 ## Open decisions (for the user)
 
-1. A separate mod or part of Depot Retrofits. Working assumption: separate (own listing, own balance, a failure in one does not break the other).
-2. Name: "Station Retrofits" (check that mod.io has no mod by that name).
-3. Whether catchment belongs in the mod at all, and at what price; it changes the game more than any depot tree.
-4. Whether kerbside stops are in scope (after probe 4).
-5. What to do without the upkeep tree on modular stations, if probe 1 says so.
+1. Whether kerbside stops are in scope (after probe 4).
