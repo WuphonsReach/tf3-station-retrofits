@@ -6,8 +6,9 @@
 --
 -- One card per station group, with each wrapped construction in the group. Collapsed, it is a summary: per tree the level
 -- boxes and what the levels do now. Expanded (the station window keeps one card open at a time), it shows per tree what the
--- next level would change and the upkeep after it; the buy buttons come with the game script's buy queue. Log lines start
--- with "STATION_RETROFITS".
+-- next level would change, the upkeep after it and a button that buys it: the button sends a buy event to the game script
+-- (retrofits.script.tl), which checks it, rebuilds the station and charges the price once the rebuild lands. Prices follow
+-- core.tl from the upkeep the game charges for the station now. Log lines start with "STATION_RETROFITS".
 --
 -- The game calls the condition for every station window it draws and calls a recipe that is nil without asking
 -- (gui/main/gui_react_util.tl, usePlugins), so the condition never throws and is false whenever the recipe is missing.
@@ -22,11 +23,14 @@ local record Entry
 	radius : number -- the largest catchment circle now; nil when the station has none
 	baseRadius : number -- that circle without the levels; nil when unknown
 	upkeep : number -- the upkeep the game charges now (the window's footer); nil when unreadable
+	buildPrice : number -- nil when the upkeep is unreadable
+	affordable : {string : boolean} -- per tree, whether the balance covers the next level; nil when unreadable
+	refused : boolean -- true when the game did not rebuild the station for its last buy (see readRefused)
 end
 
 local record CardState
 	entries : {Entry}
-	rank : integer -- nil when unknown: then every level not bought is drawn as locked
+	rank : integer -- nil when unknown: then every level not bought is drawn as locked and none can be bought
 	key : string -- every shown value as text; the card redraws when it changes
 end
 
@@ -80,10 +84,17 @@ say("card loaded ready=" .. tostring(ready) .. " companyRank=" .. tostring(compa
 -- The station window keeps the open card in its own state, by this key (content_card.makeContentCardsCollapsibleFunctions).
 local cardKey = "stationRetrofitsCard"
 
+local buyEventId = "StationRetrofits"
+-- Copied in retrofits.script.tl; keep the copies equal.
+local buyEvent = "stationRetrofitsBuy"
+
 -- Stock icons, as Depot Retrofits uses them: the line manager's standard-priority dot for the catchment circle, the vehicle
--- window's pollution and noise (gui/entity_window/vehicle/vehicle.tl) and the upkeep footer's symbol
--- (gui/entity_window/entity_window_util.tl).
+-- window's pollution and noise (gui/entity_window/vehicle/vehicle.tl), the upkeep footer's symbol
+-- (gui/entity_window/entity_window_util.tl) and the shopping cart of the vehicle store's buy button
+-- (gui/line_vehicle_mgmt/vehicle_store_window.tl).
 local upkeepIcon = "::/gui/entity_window/icons/symbol_dollar_gear.tga"
+local buyIcon = "::/gui/line_vehicle_mgmt/icons/symbol_shopping_cart.tga"
+local buyTooltip = "Buy the next level. The station is rebuilt with it."
 local treeIcons : {string : string} = {
 	catchment = "::/gui/entity_window/icons/prio_standard.tga",
 	pollution = "::/gui/entity_window/icons/symbol_pollution.tga",
@@ -135,8 +146,68 @@ local grouped = function(amount : number) : string
 	return sign .. digits:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
 end
 
+local money = function(amount : number) : string
+	local digits = grouped(amount)
+	if digits:sub(1, 1) == "-" then return "-$" .. digits:sub(2) end
+	return "$" .. digits
+end
+
 local perYear = function(amount : number) : string
-	return "$" .. grouped(amount) .. "/" .. _("Year")
+	return money(amount) .. "/" .. _("Year")
+end
+
+-- A buy is tried, not checked first, as in Depot Retrofits: the click sends it, and the game builds the rebuild or refuses
+-- it (when something built around the station since is in its way). The card remembers the tree and the level it showed at
+-- the click; when that tree has not gone up some seconds later, the game refused it (nothing is charged then), and the card
+-- says so until a level lands. It waits for the clicked tree, not for any change: a level of another tree landing just
+-- after the click let a second click through, sent with the old level (the game script refused it as stale). A click while it shows keeps the warning up, so a retry the game refuses again does not make it
+-- blink; a buy sent again replaces the refused one in the game script. Kept per construction for the session, so the warning
+-- is still there when the window is opened again. Depot Retrofits also shows what is in the way, with the game's proposal
+-- viewer in the window's action area; the station window gives its cards no action area (setActionFn), so the card only
+-- says it.
+local record Try
+	tree : string
+	from : integer -- the tree's level the card showed at the click
+	at : number -- clockNow() at the click
+	step : integer -- stepCount at the click
+end
+local tries : {Engine.Entity : Try} = {}
+local refused : {Engine.Entity : string} = {} -- the levels when the buy was found refused; cleared by a new level
+-- Nine to ten seconds: ten ticks of os.time, as the game API has no finer clock. The wait runs from the click, so it covers
+-- the game script taking up the buy as well as the build: harbours took 2 to 3 seconds to build, and with the processor
+-- busy the game script took up a buy 3 seconds after the click, which used up a 5-tick wait (docs/design/findings.md). A
+-- real refusal shows that much later. The card's steps are no measure of time (Depot Retrofits' findings: at the fastest
+-- speed 45 steps passed before a rebuild that landed in the same second); the step count is only for where os.time is not
+-- available.
+local refusedAfterSeconds = 10
+local refusedAfterSteps = 600
+local stepCount = 0
+-- Real time in whole seconds. Not os.clock: that is the process's processor time, summed over the game's threads.
+local clockNow = function() : number, boolean
+	local ok, seconds = pcall(os.time)
+	if ok and type(seconds) == "number" then return seconds, true end
+	return stepCount, false
+end
+
+-- Whether the construction's last buy was refused by the game: the clicked tree did not go up within the wait after the
+-- click. Called once per construction on each of the card's steps.
+local readRefused = function(construction : Engine.Entity, levels : {string : integer}) : boolean
+	stepCount = stepCount + 1
+	local current = core.describe(levels)
+	local try = tries[construction]
+	if try ~= nil then
+		local now, isClock = clockNow()
+		if (levels[try.tree] or 0) > try.from then
+			tries[construction] = nil
+		elseif (isClock and now - try.at >= refusedAfterSeconds) or (not isClock and stepCount - try.step >= refusedAfterSteps) then
+			tries[construction] = nil
+			refused[construction] = current
+			say("card notRebuilt construction=" .. tostring(construction) .. " tree=" .. try.tree .. " levels=" .. current
+				.. " waited=" .. tostring(now - try.at) .. " steps=" .. tostring(stepCount - try.step) .. " clock=" .. tostring(isClock))
+		end
+	end
+	if refused[construction] ~= nil and refused[construction] ~= current then refused[construction] = nil end
+	return refused[construction] ~= nil
 end
 
 local constructionParams = function(construction : Engine.Component.Construction) : {string:any}
@@ -195,18 +266,38 @@ local readValues = function(entry : Entry)
 		local ok, charged = pcall(api.engine.util.maintenance.calcMaintenanceForSubconstruction, stations[1])
 		entry.upkeep = ok and tonumber(charged) or nil
 	end
+	entry.buildPrice = entry.upkeep and core.buildPrice(entry.upkeep, entry.levels) or nil
+end
+
+-- Per tree whether the balance covers the next level, as "yynn" for the card's key; kept as yes or no, not the balance itself,
+-- so the card redraws only when one of them changes.
+local readAffordable = function(entry : Entry, balance : number) : string
+	if balance == nil or entry.buildPrice == nil then return "?" end
+	entry.affordable = {}
+	local marks : {string} = {}
+	for _, tree in ipairs(core.trees) do
+		local level = entry.levels[tree]
+		entry.affordable[tree] = level >= core.maxLevel or balance >= core.levelPrice(entry.buildPrice, tree, level + 1)
+		marks[#marks + 1] = entry.affordable[tree] and "y" or "n"
+	end
+	return table.concat(marks)
 end
 
 local readCard = function(group : Engine.Entity) : CardState
 	local s : CardState = { entries = findEntries(group) }
 	if companyRank ~= nil then s.rank = companyRank.read(api.engine.util.getPlayer()) end
+	local okBalance, balance = pcall(api.engine.util.finance.getPlayersBalance, api.engine.util.getPlayer())
 	local parts : {string} = { "rank=" .. tostring(s.rank) }
 	for _, entry in ipairs(s.entries) do
 		readValues(entry)
+		local okRefused, wasRefused = pcall(readRefused, entry.construction, entry.levels)
+		entry.refused = okRefused and wasRefused or nil
+		local afford = readAffordable(entry, okBalance and tonumber(balance) or nil)
 		parts[#parts + 1] = tostring(entry.construction) .. ":" .. entry.kind .. ":" .. core.describe(entry.levels)
 			.. ":stations=" .. tostring(entry.stations) .. ",circles=" .. tostring(entry.circles)
 			.. ",terminals=" .. tostring(entry.terminals) .. ",radius=" .. string.format("%.1f", entry.radius or -1)
 			.. "/" .. string.format("%.1f", entry.baseRadius or -1) .. ",upkeep=" .. tostring(entry.upkeep)
+			.. ",buildPrice=" .. tostring(entry.buildPrice) .. ",affordable=" .. afford .. ",refused=" .. tostring(entry.refused)
 	end
 	s.key = table.concat(parts, " ")
 	return s
@@ -246,6 +337,7 @@ local getDrawnStyles = function() : {string : StyleSheet}
 			local result : {string : StyleSheet} = {
 				gap = styleutil.makeStyle{ size = { 3, 16 } },
 				rowHeight = styleutil.makeStyle{ size = { 0, 24 } },
+				buttonGap = styleutil.makeStyle{ size = { 8, 0 } },
 			}
 			for state, color in pairs(boxColors) do
 				result[state] = styleutil.makeStyle{ backgroundColor = color, size = { 9, 16 } }
@@ -256,6 +348,93 @@ local getDrawnStyles = function() : {string : StyleSheet}
 		drawnStyles = ok and styles or {}
 	end
 	return drawnStyles ~= nil and drawnStyles.gap ~= nil and drawnStyles or nil
+end
+
+-- The "Not rebuilt" banner, drawn as Depot Retrofits draws it, after the yellow caution cards at the top of the town and line
+-- windows (entity_window_util.NotificationWidget in gui/entity_window/entity_window_util.tl): the card surface tinted with
+-- the caution colour at the game's high transparency, the icon on a solid caution tile (the colours and sizes are in
+-- game_mechanics/notifications/gui/notifications.css.lua; Caution is #FFC40C, gui/main/color_internal.lua). That CSS matches
+-- the base recipe's name, so the banner sets the same values inline; the outline class is not tied to a recipe. Built once
+-- on the first draw, apart from the drawn styles, so a failure here leaves the level boxes alone; an empty table after a
+-- failure, and the banner falls back to plain lines.
+local bannerStyles : {string : StyleSheet} = nil
+local caution = { 1, 0.769, 0.047 }
+local bannerIcon = "::/game_mechanics/notifications/gui/icons/building_industry_bulldozer.tga"
+local refusedLines = {
+	"Not rebuilt: a building, road or track is in the way.",
+	"Nothing was charged. Clear it and buy again.",
+}
+
+local getBannerStyles = function() : {string : StyleSheet}
+	if bannerStyles == nil and styleutil ~= nil then
+		local ok, styles = pcall(function() : {string : StyleSheet}
+			local ninePatch = function(fileName : string) : NinePatch
+				local patch = api.gui.NinePatch.new()
+				patch.fileName = fileName
+				patch.horizontal = { 0, 6, 26, 32 }
+				patch.vertical = { 0, 6, 26, 32 }
+				return patch
+			end
+			local surface = styleutil.makeStyle{
+				backgroundImage1 = ninePatch("::/gui/entity_window/design/card_surface.tga"),
+				backgroundColor1 = { caution[1], caution[2], caution[3], 0.25 },
+			}
+			surface.padding = api.type.Vec4f.new(8, 10, 8, 10)
+			local tile = styleutil.makeStyle{
+				backgroundImage1 = ninePatch("::/game_mechanics/notifications/gui/design/notification_surface.tga"),
+				backgroundColor1 = { caution[1], caution[2], caution[3], 1 },
+				color = { 1, 1, 1, 1 },
+				size = { 32, 32 },
+			}
+			tile.padding = api.type.Vec4f.new(4, 4, 4, 4)
+			return {
+				surface = surface,
+				tile = tile,
+				iconGap = styleutil.makeStyle{ size = { 10, 0 } },
+				below = styleutil.makeStyle{ size = { 0, 8 } },
+			}
+		end)
+		if not ok then say("card bannerStylesFailed error=" .. tostring(styles)) end
+		bannerStyles = ok and styles or {}
+	end
+	return bannerStyles ~= nil and bannerStyles.surface ~= nil and bannerStyles or nil
+end
+
+local banner = function(bannerLines : {string}) : TreeNodeId
+	local lines : {TreeNodeId} = {}
+	for _, line in ipairs(bannerLines) do
+		lines[#lines + 1] = builtin.TextView{ meta = { class = "font-scale-body" }, text = line, tooltipWhenClipped = line }
+	end
+	local styles = getBannerStyles()
+	if styles == nil then
+		return builtin.BoxLayout{ orientation = builtin.type.Orientation.Vertical, children = lines }
+	end
+	return builtin.BoxLayout{
+		orientation = builtin.type.Orientation.Vertical,
+		children = {
+			builtin.Component{
+				meta = { class = "notification-entity-window-card-outline" },
+				layout = builtin.BoxLayout{ children = {
+					builtin.Component{
+						meta = { styleSheet = styles.surface },
+						layout = builtin.BoxLayout{
+							orientation = builtin.type.Orientation.Horizontal,
+							children = {
+								builtin.ImageView{
+									meta = { styleSheet = styles.tile },
+									path = bannerIcon,
+									scaling = builtin.type.ImageViewScaling.AutoFit,
+								},
+								builtin.Component{ meta = { styleSheet = styles.iconGap } },
+								builtin.BoxLayout{ orientation = builtin.type.Orientation.Vertical, children = lines },
+							},
+						},
+					},
+				} },
+			},
+			builtin.Component{ meta = { styleSheet = styles.below } },
+		},
+	}
 end
 
 -- A row 24 pixels high with its pieces at the left edge and one at the right; the base windows push items apart with the
@@ -322,15 +501,16 @@ local effectNow = function(entry : Entry, tree : string) : string
 	return percentAt(level)
 end
 
--- What the next level changes: "230 -> 236 m", "-25% -> -30%"; "?" when the value without the levels is unknown.
+-- What the next level changes: "230 -> 236 m", "-25% -> -30%"; "?" when the value without the levels is unknown. Short, so
+-- the row has room for the upkeep and the buy button: the upkeep row leaves out the summary's "of total", which its tooltip
+-- gives.
 local effectNext = function(entry : Entry, tree : string, level : integer) : string
 	if tree == "catchment" then
-		if entry.radius == nil then return "no catchment circle" end
+		if entry.radius == nil then return "no circle" end
 		if entry.baseRadius == nil then return "?" end
 		return grouped(core.radius(entry.baseRadius, level - 1)) .. " -> " .. meters(core.radius(entry.baseRadius, level))
 	end
-	local result = percentAt(level - 1) .. " -> " .. percentAt(level)
-	return tree == "upkeep" and (result .. " of total") or result
+	return percentAt(level - 1) .. " -> " .. percentAt(level)
 end
 
 local heading = function(s : CardState, entry : Entry, rows : {TreeNodeId})
@@ -338,11 +518,65 @@ local heading = function(s : CardState, entry : Entry, rows : {TreeNodeId})
 	if #s.entries > 1 then rows[#rows + 1] = text(kindNames[entry.kind] or entry.kind) end
 end
 
--- Collapsed: per tree the symbol, the boxes and what the levels do now.
+-- The stock shopping cart and the price; a rank too low (or unknown) replaces the price. Short of money the price stays and the
+-- button is greyed out, as the game script refuses the buy. The game shows no tooltip on a disabled button (Depot Retrofits'
+-- findings), so the label says why. No "buying" state: the rebuild lands within a second, paused or not, and the card redraws
+-- with the new level. A second click before that is ignored (tries), and the game script refuses a stale level, so nothing
+-- is charged twice. A rebuild the game refuses shows as the yellow banner about ten seconds later (readRefused); the buttons
+-- stay, so the buy can be sent again.
+local buyButton = function(s : CardState, entry : Entry, tree : string) : TreeNodeId
+	local level = entry.levels[tree]
+	local nextLevel = level + 1
+	local label, tooltip : string, string
+	local enabled = false
+	local price = entry.buildPrice and core.levelPrice(entry.buildPrice, tree, nextLevel) or nil
+	if price == nil then
+		label, tooltip = "?", "Price unknown"
+	elseif tree == "catchment" and entry.radius == nil then
+		label, tooltip = money(price), "The station has no catchment circle"
+	elseif s.rank == nil then
+		label, tooltip = "Rank ?", "The company rank could not be read, so no level can be bought (see the game log)"
+	elseif nextLevel > s.rank then
+		label, tooltip = "Rank " .. tostring(nextLevel), "Needs company rank " .. tostring(nextLevel)
+	elseif entry.affordable ~= nil and not entry.affordable[tree] then
+		label, tooltip = money(price), "Not enough money"
+	else
+		label, tooltip = money(price), buyTooltip
+		enabled = true
+	end
+	local construction = entry.construction
+	return builtin.Button{
+		-- "primary" is the class the base game's dialog buttons use (gui/line_vehicle_mgmt/feedback_list_util.tl); its disabled
+		-- style greys the icon and the text (gui/main/default.css.lua). "station-retrofits-buy" gives every buy button the same
+		-- minimum width (retrofit_card.css.lua), so the rows line up.
+		meta = { class = "primary, station-retrofits-buy", enabled = enabled, tooltip = tooltip,
+			localKey = "station_retrofits_buy_" .. tostring(construction) .. "_" .. tree },
+		content = builtin.Component{ layout = builtin.BoxLayout{
+			orientation = builtin.type.Orientation.Horizontal,
+			children = { icon(buyIcon), text(label) },
+		} },
+		onClick = function()
+			if not enabled then return end
+			-- One buy at a time per station: a second click before the first lands or is refused is ignored.
+			if tries[construction] ~= nil then return end
+			tries[construction] = { tree = tree, from = level, at = clockNow(), step = stepCount }
+			if logFull then
+				say("card buy construction=" .. tostring(construction) .. " tree=" .. tree .. " from=" .. tostring(level)
+					.. " shownPrice=" .. tostring(price))
+			end
+			api.cmd.sendCommand(api.cmd.makeScriptingSendEventCmd("", buyEventId, buyEvent,
+				{ construction = construction, tree = tree, from = level }))
+		end,
+	}
+end
+
+-- Collapsed: per tree the symbol, the boxes and what the levels do now; above them the banner after a refused buy, so it
+-- shows whether the card is open or not.
 local summaryRows = function(s : CardState) : {TreeNodeId}
 	local rows : {TreeNodeId} = {}
 	for _, entry in ipairs(s.entries) do
 		heading(s, entry, rows)
+		if entry.refused then rows[#rows + 1] = banner(refusedLines) end
 		for _, tree in ipairs(core.trees) do
 			local level = entry.levels[tree]
 			local left : {TreeNodeId} = { icon(treeIcons[tree]) }
@@ -353,7 +587,10 @@ local summaryRows = function(s : CardState) : {TreeNodeId}
 	return rows
 end
 
--- Expanded: per tree what the next level changes, and the upkeep the footer would show after it.
+-- Expanded: per tree what the next level changes at the left, and at the right the upkeep the footer would show after it,
+-- then the buy button. The buttons share a minimum width, so the upkeep figures end in one column (centred between the two,
+-- they did not line up in game). The level number is left out for room (in game the row ran past the card's edge with it);
+-- the tooltip gives the level.
 local nextRows = function(s : CardState) : {TreeNodeId}
 	local rows : {TreeNodeId} = {}
 	for _, entry in ipairs(s.entries) do
@@ -372,8 +609,14 @@ local nextRows = function(s : CardState) : {TreeNodeId}
 				else
 					upkeep = text("?")
 				end
-				rows[#rows + 1] = row({ icon(treeIcons[tree]), text(" Level " .. tostring(nextLevel) .. ": " .. effectNext(entry, tree, nextLevel)) },
-					upkeep, tooltip .. "\nRight: the upkeep after level " .. tostring(nextLevel) .. ".")
+				-- A gap between the upkeep and the button.
+				local styles = getDrawnStyles()
+				local right : {TreeNodeId} = { upkeep }
+				if styles ~= nil then right[#right + 1] = builtin.Component{ meta = { styleSheet = styles.buttonGap } } end
+				right[#right + 1] = buyButton(s, entry, tree)
+				rows[#rows + 1] = row({ icon(treeIcons[tree]), text(" " .. effectNext(entry, tree, nextLevel)) },
+					builtin.BoxLayout{ orientation = builtin.type.Orientation.Horizontal, children = right },
+					tooltip .. "\nThe next level, level " .. tostring(nextLevel) .. ": what it changes, the upkeep after it and its price.")
 			end
 		end
 	end
@@ -386,7 +629,17 @@ local logShown = function(group : Engine.Entity, s : CardState)
 	if shownKeys[shownKey] then return end
 	shownKeys[shownKey] = true
 	shownLines = shownLines + 1
-	say("card shown group=" .. tostring(group) .. " constructions=" .. tostring(#s.entries) .. " " .. s.key)
+	local prices : {string} = {}
+	for _, entry in ipairs(s.entries) do
+		local list : {string} = {}
+		for _, tree in ipairs(core.trees) do
+			local level = entry.levels[tree]
+			list[#list + 1] = level < core.maxLevel and entry.buildPrice and tostring(core.levelPrice(entry.buildPrice, tree, level + 1)) or "-"
+		end
+		prices[#prices + 1] = tostring(entry.construction) .. ":" .. table.concat(list, "/")
+	end
+	say("card shown group=" .. tostring(group) .. " constructions=" .. tostring(#s.entries) .. " " .. s.key
+		.. " nextPrices=" .. table.concat(prices, " "))
 end
 
 local errorState = function() : CardState

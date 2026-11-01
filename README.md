@@ -4,7 +4,7 @@ A planned Transport Fever 3 script mod: stations get levels that widen their cat
 
 ## In short
 
-- **Status.** Design only. Nothing is built or tested yet.
+- **Status.** In development, not released. Levels are applied by a rebuild and shown in the station window (tested in game); buying them is built and not yet tested.
 - **How it would work.** As in Depot Retrofits: the mod wraps each station construction's update script, reads hidden level parameters, and rebuilds the station to apply a level. A modular station sets its catchment and emissions in one hook that runs after all its modules, so the wrapper sees the final values.
 - **How sure.** The station facts are read from the game's own scripts. The rebuild method is tested on depots, not yet on stations.
 - **Unknown.** What a rebuild does to waiting passengers and cargo and to vehicles at the platforms, and whether the upkeep can be cut at all on a modular station. The probes in [docs/design/probe-plan.md](docs/design/probe-plan.md) answer these first.

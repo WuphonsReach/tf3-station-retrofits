@@ -53,6 +53,8 @@ For the kerbside stops (`street/small_stops/small_stops.script.lua`): a `streetT
 
 - **Emissions follow crowding.** `game_mechanics/emission/emissions.script.tl` updates every station's emitter (offset 2 in its update cycle). It reads `api.engine.util.station.calculateStationUsage(entity)` and slides between the two emission states by `totalUsed / (poolCapacity + terminalCapacity)`, clamped to 0..1. So a station with more capacity is less crowded and emits less, as a depot with a larger pool does. The eco factor is 1 for stations: the Industry Greenification tool cannot reach them (from Depot Retrofits).
 - **Station window.** A click on a station opens the construction window, whose tabs are the construction's subconstructions; for a station the content is `gui/entity_window/station_group/station_group.tl`, and the window takes `customTabs` (`gui/entity_window/make_entity_window.tl`, around line 130). Depot Retrofits' window script returns this base window with a Retrofit tab added, but for stations that route hides the station window; a card in the station window's plugin extension point is the alternative (see "Seen in other mods' code", probe 2). Seen in game (test results): the base window has no tab bar; it shows a Waiting Hall row (waiting / pool capacity) on stations with a pool, then one row per terminal (cargo type, length in m, waiting / capacity on passenger terminals only, the lines that stop), a Loaded/Unloaded graph, the upkeep per year and a Configure button. Selecting a station draws its catchment circle and highlights the buildings inside it.
+- **No action area for plugin cards.** The station window hands its plugin cards the entity, its ownership, the game context, the callout side and the collapse functions (`gui/entity_window/eow_extension_util.d.tl`, `IEowWidgetsExtensionParams`; filled in `station_group.tl` around line 849), but no `setActionFn`. So a card cannot place the proposal viewer in the window's action area as Depot Retrofits' tab does, and Depot Retrofits found that the viewer placed among a window's own widgets stops the game (`Assertion !IsTransformWithContext(node.recipeId)`). For now the card only says that a rebuild was refused.
+- **Tram tracks.** A road station with tram tracks has the construction param `tramTrack` above 1, which adds the tram transport modes (`street/modular_street_station/modules.script.lua`); the buy books its price under TRAM then, else ROAD.
 
 ## Base module values
 
@@ -89,7 +91,7 @@ Each of these held for depots and maintenance buildings in game; each needs a ch
 - Rebuilds the game starts (catenary, module edits through the depot's upgrade script) went through the wrapper and kept the levels.
 - `loadModule` modifiers are called by TF3 (Depot Retrofits wraps module update scripts with one). Probably not needed for stations, since the hook runs after the modules.
 - Upkeep: the construction's `MAINTENANCE_COST` component holds the script's `maintenanceCost`; the charged figure is that × the base config's `infrastructureMaintenanceScale` (`calcMaintenanceForSubconstruction`).
-- Charging: a `JournalEntry` of type `CONSTRUCTION`, booked with `makeJournalBookAssetCmd` from the game script. Depot Retrofits uses `JournalEntry.Construction.DEPOT`; which value suits a station is not checked.
+- Charging: a `JournalEntry` of type `CONSTRUCTION`, booked with `makeJournalBookAssetCmd` from the game script. Depot Retrofits uses `JournalEntry.Construction.DEPOT`; the list (`scripts/journal.d.tl`) also has `STATION`, which the station buy uses. The Finances tab shows it under Investments, Infrastructure, whatever the carrier (buy test).
 - The game script's state is written from the simulation thread (`handleEvent`) and from about ten worker threads (`update`), each with its own copy; module variables do not persist. A pending buy counts as landed once the stored level is at least the bought one.
 - Rank: base `company_progression_util.tl` gives the claimed rank.
 
@@ -109,13 +111,12 @@ From a read-only survey of the station, catchment, capacity and emission script 
 
 ## Unknowns
 
-1. What a rebuild does to many waiting passengers and cargo (probe 1 had at most one waiting) and to vehicles loading at the platforms or a train halfway into one. Ids and lines are kept (probe 1).
+1. What a rebuild does to many waiting passengers and cargo (probe 1 had at most one waiting) and to vehicles loading at the platforms or a train halfway into one. Ids and lines are kept (probe 1). A train on the station's track outside the platforms steps back onto the next segment (buy test); a train at a platform stayed.
 2. Whether the Finances tab shows the levelled upkeep as the station window does (probe 1 checked the window and `calcMaintenanceForSubconstruction`).
 5. How often the game refuses a station rebuild, compared with depots. (Probe 1, then play.)
 7. Whether module edits, catenary swaps and the rail and street upgrade scripts keep the hidden params. (Probe 3.)
 8. Whether a kerbside stop (an edge object) can be replaced with new params. (Probe 4.)
 9. How much comfort and load speed change in play. Leave both out until measured.
-10. Which `JournalEntry.Construction` value fits a station charge.
 11. How stations from popular mods are shaped (whether they return a `station` table, use `terminateConstructionHook`, set `constructionType`).
 12. Whether the levels stack with other mods that change the same values. Read from their code (next section): they do if we wrap through `loadScript` and multiply the values we find; untested in game.
 
@@ -196,3 +197,41 @@ A copy of a large save from mod.io (May 1969, 229 stations, 153 lines, rank 13),
   - Window height: when the window is full (8 terminals; a bus terminal under an overcrowding notice) it keeps its height and the terminal list scrolls in less space; otherwise the window grows. Each window keeps its own open or closed card; a new window starts collapsed.
   - A cargo-only truck station showed waiting capacity "0" and "Level 1: 0 -> 0"; that row is now left out on stations with no waiting places (spec, "Buying a level").
 - **Second run**, with that row left out (no error line): the truck station shows four rows, collapsed and expanded; the passenger stations still show five. The two cargo stations the probe levelled to 5/5/5/5/5 (a rail station with four "All Cargo Types" terminals, a bulk truck station) show the levelled card for the first time: five white boxes per row, "200 -> 230 m" and "175 -> 201 m", "-25%", "-25% of total", and expanded "Level 6: 230 -> 236 m" with the upkeep after it. Their waiting capacity row showed "0 -> 0" and offered "Level 6: 0 -> 0" for 15% more upkeep; the row is now left out there too, levels or not, and waiting capacity levels add no upkeep while a station has no waiting places (spec, "Price and upkeep"; the `applied` log line now has `charged=` beside `levels=`).
+
+### 2026-11-01: buy buttons, first look
+
+The `Deutschland 20` save copy as in the card tests, logLevel `"full"`, with the buy build (game script, buttons, banner). Log: `local/logs/stdout-2026-11-01-buy1.txt`.
+
+- Loaded with no `Error while loading game script`; the game script logged `rank=13 earnedRank=13 rankSource=util`.
+- Hannover Station Ost (8 terminals, levels 0): upkeep $2,358,400, build price $14,150,400, next prices $2,830,080 catchment, $1,132,032 pollution, $1,698,048 noise, $3,537,600 upkeep, as the formulas give.
+- Expanded, "Level 1: 0% -> -5% of total", the upkeep and the button did not fit: the upkeep row's button ran past the card's edge ("$3,537,60"), and the upkeep figures started at a different place on each row. The rows now leave out "Level 1:" and "of total" and centre the upkeep between the effect and the button (not yet seen in game).
+- **11 buys on Hannover Station Ost** (construction 116227), the game paused throughout (May 9, 1969): upkeep 1 to 3, noise 1 to 3, pollution 1 and 2, catchment 1 to 3, one click every 2 to 6 seconds. Log: `local/logs/stdout-2026-11-01-buy2.txt`.
+  - Each buy landed and was charged within a second (`buy sent`, then `buy charged` with the stored levels as bought); no `notLanded`, no refusal, no "Not rebuilt". The construction id stayed 116227.
+  - Each price was the one the card showed (`shownPrice` = `price`), and the balance before each buy was the one before it less that price. The bottom bar's earnings went from $97,838,672 to $67,396,563, down $30,442,109, the 11 prices to the dollar. Carrier RAIL (`carrierSource=kind`).
+  - The build price held at $14,150,400 throughout (6 × upkeep ÷ the levels' factor), so later prices rose only by the 1.15 ladder: upkeep $3,537,600, $4,068,240, $4,678,476.
+  - Upkeep: each level landed at the upkeep the card had shown for it ($2,358,400 to $2,240,480 for upkeep 1; noise 1 $2,205,104; catchment 1 $3,107,190 against $3,107,192 shown, a $2 rounding difference). Script upkeep 737,000 × the factor (`applied` lines).
+  - Catchment: the largest circle 200, 206, 212, 218 m; the circle on the map grew.
+  - The emitters read 0 after the first rebuild and stayed 0 while paused (`noisePower=0 pollutionPower=0` in every later line), as probe 1 saw: the game's emissions script sets them again once time runs.
+  - Waiting passengers: as before each rebuild (the user watched; the waiting hall read 0 / 535 throughout).
+  - A train just outside the platforms, on the station's own track, stepped back to the next track segment at the first rebuild, with the game paused, and stayed there through the next ten; a train at a platform did not move. As when a road segment is removed: the game moves a vehicle on a replaced edge onto an adjacent one.
+  - The four Finances shots were taken before the first buy. Investments there has Roads, Tracks, Infrastructure, Warehouses and Vehicles, no Stations row; which row the charges went to is not seen yet.
+
+### 2026-11-01: buys on six stations
+
+A fresh load of the same `Deutschland 20` copy, logLevel `"full"`, with the three-part rows. Log: `local/logs/stdout-2026-11-01-buy3.txt`; 26 screenshots (18:04 to 18:10 local).
+
+- **70 buys, all charged once** at the price the card showed: Hannover Station Ost (rail, 13, RAIL), Hannover Station Umstieg (road station with tram tracks, 22, TRAM), Hannover Station Abzweigung (cargo rail, 9, RAIL), Köln Station Anbau (cargo road, 5, ROAD), Köln Station Ost (cargo road, 13, ROAD), Nürnberg Hafen (harbour, 8, WATER).
+- **Finances**: the charges land under Investments, Infrastructure. Its 3/69 to 5/69 figure grew by $119,521,852 by the first shot and $133,335,195 by the last, the sums of the logged prices at those times to the dollar; earnings fell by the same. The carrier shows nowhere there (Investments is not split by carrier).
+- **The three-part rows fit** on every station: effect at the left, upkeep in the middle, button at the right edge. At rank 13 a tree at level 13 shows a greyed "Rank 14" button, and its tooltip "Level 13/13 (max 15)".
+- **Harbours land slower.** Rail and road station rebuilds landed within a second of `buy sent`; the harbour's took 2 to 3 seconds (noise 3: sent 23:09:34, charged 23:09:37). The card waited 2 os.time ticks before calling a buy refused, so the "Not rebuilt" banner showed for a moment before four of the eight harbour levels landed (`card notRebuilt`, then the level). The game script gave up after 3 ticks: noise 3 was charged only because the landed check runs first. The card now waits 5 ticks and the game script 30 seconds.
+- The tram terminal's waiting hall read 283 / 70 before any buy (the base game's own overflow; untouched by the levels).
+
+### 2026-11-01: rapid buys with the processor busy
+
+The same save, logLevel `"full"`, with the shared button width and the 5-tick wait; the processor saturated by other work, so the game ran slowly even at 4x. Log: `local/logs/stdout-2026-11-01-buy4.txt`.
+
+- 52 buys on three stations (Hannover Station Ost 19, Nürnberg Hafen 24, construction 142527 9), all charged once; one more refused as stale (below).
+- **The wait runs from the click, and the game script can be slow to take a buy up.** Harbour pollution 7: clicked 23:23:01, taken up (`buy queued`, `buy sent`) at 23:23:04, landed 23:23:06. The 5-tick wait ran out the same second, so the banner showed for a moment (`card notRebuilt waited=5`), as the user saw once. The card now waits 10 ticks.
+- **A level of another tree let a second click through.** Two noise clicks at 23:23:06, one on each side of the card seeing pollution 7 land: the card took any change of the levels as the click having landed, so both went out with noise 0. The game script built the first and refused the second (`buy refused reason=stale stored=1`); one charge. The card now waits for the clicked tree to go up.
+- **The buttons share a width** (25 screenshots): the stylesheet rule `Button!station-retrofits-buy { minSize = { 120, -1 } }` loaded, every buy button is the same width ("$556,800" as wide as "$222,720"), the price sits in the middle of it, and the upkeep figures end in one column before the buttons.
+

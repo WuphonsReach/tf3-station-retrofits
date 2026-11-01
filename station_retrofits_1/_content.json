@@ -4,10 +4,11 @@
         "company_rank.tl",
         "core.tl",
         "mod.script.tl",
-        "probe.gs.lua",
-        "probe.script.tl",
+        "retrofit_card.css.lua",
         "retrofit_card.res.lua",
         "retrofit_card.script.tl",
+        "retrofits.gs.lua",
+        "retrofits.script.tl",
         "settings.tl"
     ]
 }

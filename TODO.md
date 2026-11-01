@@ -2,8 +2,8 @@
 
 ## In short
 
-- **Where it stands.** Probes 1 and 2 work in game: levels applied by a rebuild, all values as the formulas say for 30 days, and a Retrofit card in the station window showing them. Rebuilds the game starts and kerbside stops are not tested yet.
-- **Next.** Probe 3 (rebuilds the game starts), in one session with the probe 1 and 2 leftovers (results so far in [docs/design/findings.md](docs/design/findings.md)). Decisions so far are in [docs/design/spec.md](docs/design/spec.md), "Decisions".
+- **Where it stands.** Probes 1 and 2 work in game: levels applied by a rebuild, all values as the formulas say for 30 days, and a Retrofit card in the station window showing them. Buying a level from the card is built (game script, buy buttons, "Not rebuilt" banner) and not yet tested. Rebuilds the game starts and kerbside stops are not tested yet.
+- **Next.** Test buying in game (below), then probe 3 (rebuilds the game starts) with bought levels, in one session with the probe 1 and 2 leftovers (results so far in [docs/design/findings.md](docs/design/findings.md)). Decisions so far are in [docs/design/spec.md](docs/design/spec.md), "Decisions".
 
 ## Set-up
 
@@ -26,7 +26,7 @@
 
 ## Desk checks (no game needed)
 
-- [ ] Which `JournalEntry.Construction` value suits a station charge (`api/tealdef/api/type.d.tl`; Depot Retrofits uses `DEPOT`).
+- [x] Which `JournalEntry.Construction` value suits a station charge: `STATION` (`scripts/journal.d.tl`); still to see in the Finances tab.
 - [ ] Whether base station `.con` files set `constructionType`.
 - [ ] Whether the rail and street `upgradeFn` return the other params unchanged (`rail/modular_station/modular_station.script.lua` around line 351).
 - [x] How the station window shows catchment and capacity: a Waiting Hall row and terminal rows with waiting / capacity (passenger terminals only), the upkeep footer; no catchment figure (findings, test results). The card need not repeat them.
@@ -37,5 +37,7 @@
 ## After the probes
 
 - [ ] Fix the spec: trees, shares, scope (airports, underground station, kerbside stops), the upkeep tree.
-- [ ] Build 1.0 from Depot Retrofits' 1.2 code: `levels.tl`, `company_rank.tl` (unchanged), the game script (buy queue, charge on landing, "Not rebuilt"), the window.
+- [x] Buying, from Depot Retrofits' 1.2 code: prices in `core.tl`, the game script `retrofits.script.tl` (buy queue, checks, rebuild, charge on landing), buy buttons and the "Not rebuilt" banner in the card. The probe 1 game script is retired (git history).
+- [ ] Test buying in game. Done on a rail station (11 buys, all four trees): prices, charges, upkeep and catchment as the card showed (findings, test results). Then 70 buys on six stations (rail, road with tram, cargo rail, cargo road, harbour): charges under Investments, Infrastructure, to the dollar; the three-part rows fit; "Rank 14" greyed at rank 13. Left: harbour buys with the longer waits (no flash); greyed for money; a refused rebuild shows the banner and charges nothing; buying while the game runs.
+- [ ] "Not rebuilt": show what is in the way (the proposal viewer needs an action area the station window does not give its cards; findings).
 - [ ] User guide, listing text, cover and gallery, release process (`docs/publishing.md` from Depot Retrofits).

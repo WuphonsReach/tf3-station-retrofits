@@ -30,6 +30,9 @@ global record StationRetrofitsCore
 	withLevel : function(levels : {string : integer}, tree : string, level : integer) : {string : integer}
 	emissionFactor : function(level : integer) : number
 	upkeepFactor : function(levels : {string : integer}) : number
+	-- 6 times the upkeep charged now without the levels, rounded to $100; the price of a tree's level from it.
+	buildPrice : function(chargedUpkeep : number, levels : {string : integer}) : number
+	levelPrice : function(buildPrice : number, tree : string, level : integer) : integer
 	-- The share of the base upkeep each level of a tree adds (no entry for the upkeep tree), and the share of the total each
 	-- upkeep level cuts.
 	upkeepShares : {string : number}

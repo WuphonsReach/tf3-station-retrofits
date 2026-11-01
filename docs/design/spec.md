@@ -2,7 +2,7 @@
 
 ## In short
 
-Stations get levels, bought one at a time in the station's own window, the way [Depot Retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits) does it for depots. This is a draft: every number below is a starting point taken from Depot Retrofits, and the trees marked "if the probe allows" depend on the probes in [probe-plan.md](probe-plan.md). Nothing is built yet.
+Stations get levels, bought one at a time in the station's own window, the way [Depot Retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits) does it for depots. This is a draft: every number below is a starting point taken from Depot Retrofits, and the scope depends on the probes in [probe-plan.md](probe-plan.md). Levels are applied and shown (probes 1 and 2); buying them is built and not yet tested in game.
 
 The planned first version has three trees of 15 levels each (catchment radius, pollution, noise), plus an upkeep tree. Waiting capacity is not a tree: players already add it by building more station modules, and mods with larger stops or modules cover the rest. It covers the base modular stations (rail, road and tram terminals, harbours) and later stations from other mods that have the same shape. A tree's highest level is the company's claimed rank. A level is applied by rebuilding the station with new hidden params, as for depots.
 
@@ -48,9 +48,10 @@ Notes:
 
 - In a collapsible Retrofit card in the station's window (a tab would need `entityWindowScript`, which stops the station window from opening; see findings). The station window keeps one collapsible card open at a time, and the card starts collapsed.
   - **Collapsed (summary):** one row per tree: the stock icon, 15 level boxes (bought, allowed by the rank, locked) and, at the right edge, what the levels do now ("200 -> 230 m" for the largest catchment circle, "-25%" for pollution and noise, "-25% of total" for upkeep).
-  - **Expanded:** one row per tree: what the next level changes, the upkeep after it, and a buy button with the shopping cart and the price. Greyed when the rank is too low or unknown, or the balance is short. The game's own upkeep footer stays where it is in the window.
+  - **Expanded:** one row per tree: what the next level changes at the left ("200 -> 206 m", "0% -> -5%"), and at the right the upkeep after it, then a buy button with the shopping cart and the price. The buy buttons share a minimum width (a mod CSS rule; a longer label widens its button rather than being cut off), so the upkeep figures end in one column. No "Level 1:" label: with it the row ran past the card's edge; the tooltip gives the level. Greyed when the rank is too low or unknown, or the balance is short. The game's own upkeep footer stays where it is in the window.
   - **Tooltip, on the whole row:** the tree's name and "Level 4/7 (max 15)" as in Depot Retrofits (the level over what the rank allows, "(max 15)" only while the rank is lower), then what a level does and what upkeep it adds, one sentence a line.
-- A click sends the buy; the game script rebuilds the station and books the price once the rebuild has landed; "Not rebuilt" with the proposal viewer when the game refuses it.
+- A click sends the buy; the game script checks it again (level not stale, within the rank, enough money), rebuilds the station and books the price once the rebuild has landed, as station construction under the station's carrier (rail RAIL, harbour WATER, road station ROAD, or TRAM with tram tracks). A rebuild that never lands costs nothing. The price shows in the Finances tab under Investments, Infrastructure.
+- When the game refuses the rebuild (the clicked tree has not gone up about 10 seconds after the click: harbours take up to 3 seconds to build, and a busy game can take 3 more to take up the buy), the card shows the yellow "Not rebuilt" banner above its rows until a level lands: "Not rebuilt: a building, road or track is in the way. Nothing was charged. Clear it and buy again." Depot Retrofits also shows what is in the way with the game's proposal viewer; the station window gives its cards no place for it (findings), so that is left for later.
 - What a rebuild does to waiting passengers and cargo and to vehicles at the platforms is unknown (probe 1). If it loses the waiting passengers or cargo, say so on the card.
 
 ## Rank gate
