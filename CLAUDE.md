@@ -32,10 +32,10 @@ Depot Retrofits is MIT and by the same author, so its code may be copied. Its 1.
 | `levels.tl` (trees, formulas) | new trees: radius, capacity, pollution, noise, upkeep; same price ladder |
 | `company_rank.tl` (rank gate) | as is |
 | `settings.tl` (`logLevel`) | as is |
-| `mod.script.tl` (`loadConstruction` modifier, depot detection) | station detection; wrap the update script and the `terminateConstructionHook` it returns |
+| `mod.script.tl` (`loadConstruction` modifier, depot detection) | `loadConstruction` only for the hidden params; a `loadScript` modifier wraps the base station scripts' `updateFn` and the `terminateConstructionHook` it returns (findings, "Seen in other mods' code") |
 | `construction.script.tl` (wrapper) | scale the station subconstruction after the original hook; upkeep may go negative (probe 1) |
 | `retrofits.gs.lua`, `retrofits.script.tl` (buy queue, rebuild, charge) | mostly as is; journal category and the station's carrier |
-| `retrofit_window.script.tl` (Retrofit tab, "Not rebuilt") | new cards and Summary; same widgets |
+| `retrofit_window.script.tl` (Retrofit tab, "Not rebuilt") | a card in the station window's `StationGroupEowExtensionPoint`, not a tab: `entityWindowScript` would stop the station window opening; same widgets |
 
 Keep the copies independent: this mod must not load files from Depot Retrofits, and neither mod may wrap a construction the other wraps (airports have a hangar depot; see findings).
 
