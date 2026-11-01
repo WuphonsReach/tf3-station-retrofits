@@ -2,8 +2,8 @@
 
 ## In short
 
-- **Where it stands.** Design, plus a mod scaffold that loads cleanly in game and only logs its start-up line: findings read from the base game's station scripts, a draft spec and a probe plan. Nothing tested in game.
-- **Next.** Build probe 1 ([docs/design/probe-plan.md](docs/design/probe-plan.md)). Decisions so far are in [docs/design/spec.md](docs/design/spec.md), "Decisions".
+- **Where it stands.** Probe 1 works in game (levels applied by a rebuild, all values as the formulas say); findings, a draft spec and a probe plan. The window card and rebuilds the game starts are not tested yet.
+- **Next.** Probe 1 ran (results in [docs/design/findings.md](docs/design/findings.md)); its leftovers can share a session with probe 2 (the Retrofit card) and probe 3 (rebuilds the game starts). Decisions so far are in [docs/design/spec.md](docs/design/spec.md), "Decisions".
 
 ## Set-up
 
@@ -17,7 +17,8 @@
 
 ## Probes ([docs/design/probe-plan.md](docs/design/probe-plan.md))
 
-- [ ] Probe 1: rebuild up to 3 stations with fixed levels; hook wrapper, ids, waiting passengers and cargo, vehicles at platforms, cost of a rebuild, negative upkeep, catchment, emissions, save and load, refusals.
+- [x] Probe 1: rebuild 3 stations with fixed levels (findings, test results): wrapper, ids, cost, upkeep, catchment, capacity, emissions all as the formulas say.
+- [ ] Probe 1 leftovers: a crowded station and a vehicle at a platform during a rebuild; 7 and 30 days; save and load of a levelled station; the construction's marker beside the circle centres (`origin=` now logged).
 - [ ] Probe 2: Retrofit card in the station window (plugin extension point, not `entityWindowScript`), base window unchanged.
 - [ ] Probe 3: module edits, era swaps and catenary keep the levels.
 - [ ] Probe 4: kerbside stops (edge objects) can be replaced.
