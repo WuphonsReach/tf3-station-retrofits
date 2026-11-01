@@ -1,0 +1,34 @@
+-- The type of the shared core module (station_retrofits_1/content/core.tl), for type checking only; the mod does not ship
+-- this file. Each script loads the module with ug_require and casts it to this record.
+
+global record StationRetrofitsCore
+	maxLevel : integer
+	trees : {string} -- the five trees in display order
+	paramKeys : {string : string} -- tree -> construction param key
+	names : {string : string} -- tree -> display name
+
+	-- The base station scripts and constructions, by the end of their path (".lua" stripped), and the kind each log line names.
+	scriptKinds : {string : string}
+	constructionKinds : {string : string}
+	-- The kind of a file in kinds, from its path with or without a namespace and ".lua"; nil for any other file.
+	kindOf : function(fileName : string, kinds : {string : string}) : string
+
+	-- The levels stored in a construction's params, 0 for a tree with no param (a station placed before the mod, or new).
+	read : function(params : {string : any}) : {string : integer}
+	-- Writes the levels into a params table, in the stored form (1-based index into "0".."15").
+	store : function(params : {string : any}, levels : {string : integer})
+	-- "catchment/capacity/pollution/noise/upkeep", as the log lines write levels; "nil" for nil.
+	describe : function(levels : {string : integer}) : string
+	-- true when every tree is at level 0.
+	isZero : function(levels : {string : integer}) : boolean
+
+	radius : function(baseRadius : number, level : integer) : number
+	capacity : function(baseCapacity : number, level : integer) : integer
+	emissionFactor : function(level : integer) : number
+	upkeepFactor : function(levels : {string : integer}) : number
+
+	-- Wraps a base station script's updateFn (the loadScript modifier in mod.script.tl). kind names the script in log lines;
+	-- say writes a log line; logFull adds the before and after values.
+	wrapUpdate : function(original : function(any, any) : any, kind : string, say : function(string), logFull : boolean)
+		: function(any, any) : any
+end
