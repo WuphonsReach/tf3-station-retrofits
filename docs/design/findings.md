@@ -225,3 +225,13 @@ A fresh load of the same `Deutschland 20` copy, logLevel `"full"`, with the thre
 - **The three-part rows fit** on every station: effect at the left, upkeep in the middle, button at the right edge. At rank 13 a tree at level 13 shows a greyed "Rank 14" button, and its tooltip "Level 13/13 (max 15)".
 - **Harbours land slower.** Rail and road station rebuilds landed within a second of `buy sent`; the harbour's took 2 to 3 seconds (noise 3: sent 23:09:34, charged 23:09:37). The card waited 2 os.time ticks before calling a buy refused, so the "Not rebuilt" banner showed for a moment before four of the eight harbour levels landed (`card notRebuilt`, then the level). The game script gave up after 3 ticks: noise 3 was charged only because the landed check runs first. The card now waits 5 ticks and the game script 30 seconds.
 - The tram terminal's waiting hall read 283 / 70 before any buy (the base game's own overflow; untouched by the levels).
+
+### 2026-11-01: rapid buys with the processor busy
+
+The same save, logLevel `"full"`, with the shared button width and the 5-tick wait; the processor saturated by other work, so the game ran slowly even at 4x. Log: `local/logs/stdout-2026-11-01-buy4.txt`.
+
+- 52 buys on three stations (Hannover Station Ost 19, Nürnberg Hafen 24, construction 142527 9), all charged once; one more refused as stale (below).
+- **The wait runs from the click, and the game script can be slow to take a buy up.** Harbour pollution 7: clicked 23:23:01, taken up (`buy queued`, `buy sent`) at 23:23:04, landed 23:23:06. The 5-tick wait ran out the same second, so the banner showed for a moment (`card notRebuilt waited=5`), as the user saw once. The card now waits 10 ticks.
+- **A level of another tree let a second click through.** Two noise clicks at 23:23:06, one on each side of the card seeing pollution 7 land: the card took any change of the levels as the click having landed, so both went out with noise 0. The game script built the first and refused the second (`buy refused reason=stale stored=1`); one charge. The card now waits for the clicked tree to go up.
+- **The buttons share a width** (25 screenshots): the stylesheet rule `Button!station-retrofits-buy { minSize = { 120, -1 } }` loaded, every buy button is the same width ("$556,800" as wide as "$222,720"), the price sits in the middle of it, and the upkeep figures end in one column before the buttons.
+
