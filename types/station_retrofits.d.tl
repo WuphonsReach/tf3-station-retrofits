@@ -3,7 +3,7 @@
 
 global record StationRetrofitsCore
 	maxLevel : integer
-	trees : {string} -- the five trees in display order
+	trees : {string} -- the four trees in display order
 	paramKeys : {string : string} -- tree -> construction param key
 	names : {string : string} -- tree -> display name
 
@@ -17,23 +17,19 @@ global record StationRetrofitsCore
 	read : function(params : {string : any}) : {string : integer}
 	-- Writes the levels into a params table, in the stored form (1-based index into "0".."15").
 	store : function(params : {string : any}, levels : {string : integer})
-	-- "catchment/capacity/pollution/noise/upkeep", as the log lines write levels; "nil" for nil.
+	-- "catchment/pollution/noise/upkeep", as the log lines write levels; "nil" for nil.
 	describe : function(levels : {string : integer}) : string
 	-- true when every tree is at level 0.
 	isZero : function(levels : {string : integer}) : boolean
 
 	radius : function(baseRadius : number, level : integer) : number
-	capacity : function(baseCapacity : number, level : integer) : integer
 	-- The value before the levels, from one the wrapper scaled; nil when the formula does not give it back (another mod also
 	-- scaled it).
 	baseRadius : function(radius : number, level : integer) : number
-	baseCapacity : function(capacity : integer, level : integer) : integer
 	-- A copy of levels with one tree set to level.
 	withLevel : function(levels : {string : integer}, tree : string, level : integer) : {string : integer}
 	emissionFactor : function(level : integer) : number
 	upkeepFactor : function(levels : {string : integer}) : number
-	-- The levels the upkeep is charged for: no waiting capacity levels while the station has no waiting places.
-	chargedLevels : function(levels : {string : integer}, hasWaiting : boolean) : {string : integer}
 	-- The share of the base upkeep each level of a tree adds (no entry for the upkeep tree), and the share of the total each
 	-- upkeep level cuts.
 	upkeepShares : {string : number}

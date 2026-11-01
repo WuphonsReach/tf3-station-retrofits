@@ -1,11 +1,11 @@
 # Station Retrofits
 
-A planned Transport Fever 3 script mod: stations get levels that widen their catchment, raise their waiting capacity, cut their pollution and noise, and cut their upkeep, bought in the station's window. It is the sibling of [Depot Retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits), which does the same for depots and maintenance buildings.
+A planned Transport Fever 3 script mod: stations get levels that widen their catchment, cut their pollution and noise, and cut their upkeep, bought in the station's window. It is the sibling of [Depot Retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits), which does the same for depots and maintenance buildings.
 
 ## In short
 
 - **Status.** Design only. Nothing is built or tested yet.
-- **How it would work.** As in Depot Retrofits: the mod wraps each station construction's update script, reads hidden level parameters, and rebuilds the station to apply a level. A modular station sets its capacity, catchment and emissions in one hook that runs after all its modules, so the wrapper sees the final values.
+- **How it would work.** As in Depot Retrofits: the mod wraps each station construction's update script, reads hidden level parameters, and rebuilds the station to apply a level. A modular station sets its catchment and emissions in one hook that runs after all its modules, so the wrapper sees the final values.
 - **How sure.** The station facts are read from the game's own scripts. The rebuild method is tested on depots, not yet on stations.
 - **Unknown.** What a rebuild does to waiting passengers and cargo and to vehicles at the platforms, and whether the upkeep can be cut at all on a modular station. The probes in [docs/design/probe-plan.md](docs/design/probe-plan.md) answer these first.
 

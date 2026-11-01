@@ -21,8 +21,6 @@ local record Entry
 	terminals : integer
 	radius : number -- the largest catchment circle now; nil when the station has none
 	baseRadius : number -- that circle without the levels; nil when unknown
-	capacity : integer -- waiting hall and terminals together, now
-	capacityBases : {integer} -- each of those without the levels; nil when one is unknown
 	upkeep : number -- the upkeep the game charges now (the window's footer); nil when unreadable
 end
 
@@ -82,13 +80,12 @@ say("card loaded ready=" .. tostring(ready) .. " companyRank=" .. tostring(compa
 -- The station window keeps the open card in its own state, by this key (content_card.makeContentCardsCollapsibleFunctions).
 local cardKey = "stationRetrofitsCard"
 
--- Stock icons, as Depot Retrofits uses them: the line manager's standard-priority dot for the catchment circle, the station
--- window's waiting-hall symbol (gui/entity_window/station_group/station_group.tl), the vehicle window's pollution and noise
--- (gui/entity_window/vehicle/vehicle.tl) and the upkeep footer's symbol (gui/entity_window/entity_window_util.tl).
+-- Stock icons, as Depot Retrofits uses them: the line manager's standard-priority dot for the catchment circle, the vehicle
+-- window's pollution and noise (gui/entity_window/vehicle/vehicle.tl) and the upkeep footer's symbol
+-- (gui/entity_window/entity_window_util.tl).
 local upkeepIcon = "::/gui/entity_window/icons/symbol_dollar_gear.tga"
 local treeIcons : {string : string} = {
 	catchment = "::/gui/entity_window/icons/prio_standard.tga",
-	capacity = "::/gui/entity_window/icons/station_pool.tga",
 	pollution = "::/gui/entity_window/icons/symbol_pollution.tga",
 	noise = "::/gui/entity_window/icons/symbol_noise.tga",
 	upkeep = upkeepIcon,
@@ -105,8 +102,6 @@ local kindNames : {string : string} = {
 local treeTooltips : {string : string} = {
 	catchment = "Each level widens every catchment circle by 3%, at least 5 m.\n"
 		.. "Shown: the largest circle, without and with the levels.",
-	capacity = "Each level adds 10% to the waiting hall and to each terminal, at least 1 place each.\n"
-		.. "Shown: all waiting places together, without and with the levels.",
 	pollution = "Each level cuts the station's own pollution by 5%.\n"
 		.. "Vehicle pollution is not affected.",
 	noise = "Each level cuts the station's own noise by 5%.\n"
@@ -178,19 +173,8 @@ end
 local readValues = function(entry : Entry)
 	local c = api.engine.getComponent(entry.construction, api.type.ComponentType.CONSTRUCTION) as Engine.Component.Construction
 	local stations = c and c.stations or {}
-	entry.stations, entry.circles, entry.terminals, entry.capacity = #stations, 0, 0, 0
-	entry.capacityBases = {}
-	local radiusLevel, capacityLevel = entry.levels.catchment, entry.levels.capacity
-	local addCapacity = function(capacity : integer)
-		if capacity == nil or capacity <= 0 then return end
-		entry.capacity = entry.capacity + capacity
-		local base = core.baseCapacity(capacity, capacityLevel)
-		if base == nil then
-			entry.capacityBases = nil
-		elseif entry.capacityBases ~= nil then
-			entry.capacityBases[#entry.capacityBases + 1] = base
-		end
-	end
+	entry.stations, entry.circles, entry.terminals = #stations, 0, 0
+	local radiusLevel = entry.levels.catchment
 	local unknownBase = false
 	for _, station in ipairs(stations) do
 		local s = api.engine.getComponent(station, api.type.ComponentType.STATION) as Station
@@ -203,11 +187,7 @@ local readValues = function(entry : Entry)
 				end
 				if core.baseRadius(area.radius, radiusLevel) == nil then unknownBase = true end
 			end
-			if s.pool ~= nil then addCapacity(s.pool.capacity) end
-			for _, terminal in ipairs(s.terminals or {}) do
-				entry.terminals = entry.terminals + 1
-				addCapacity(terminal.capacity)
-			end
+			entry.terminals = entry.terminals + #(s.terminals or {})
 		end
 	end
 	if unknownBase then entry.baseRadius = nil end
@@ -226,8 +206,7 @@ local readCard = function(group : Engine.Entity) : CardState
 		parts[#parts + 1] = tostring(entry.construction) .. ":" .. entry.kind .. ":" .. core.describe(entry.levels)
 			.. ":stations=" .. tostring(entry.stations) .. ",circles=" .. tostring(entry.circles)
 			.. ",terminals=" .. tostring(entry.terminals) .. ",radius=" .. string.format("%.1f", entry.radius or -1)
-			.. "/" .. string.format("%.1f", entry.baseRadius or -1) .. ",capacity=" .. tostring(entry.capacity)
-			.. "/" .. tostring(entry.capacityBases ~= nil) .. ",upkeep=" .. tostring(entry.upkeep)
+			.. "/" .. string.format("%.1f", entry.baseRadius or -1) .. ",upkeep=" .. tostring(entry.upkeep)
 	end
 	s.key = table.concat(parts, " ")
 	return s
@@ -325,13 +304,6 @@ local meters = function(radius : number) : string
 	return grouped(radius) .. " m"
 end
 
-local capacityAt = function(entry : Entry, level : integer) : integer
-	if entry.capacityBases == nil then return nil end
-	local total = 0
-	for _, base in ipairs(entry.capacityBases) do total = total + core.capacity(base, level) end
-	return total
-end
-
 local percentAt = function(level : integer) : string
 	return level == 0 and "0%" or ("-" .. tostring(round(level * core.upkeepStep * 100)) .. "%")
 end
@@ -344,10 +316,6 @@ local effectNow = function(entry : Entry, tree : string) : string
 		if entry.radius == nil then return "-" end
 		if level == 0 or entry.baseRadius == nil then return meters(entry.radius) end
 		return grouped(entry.baseRadius) .. " -> " .. meters(entry.radius)
-	elseif tree == "capacity" then
-		local base = capacityAt(entry, 0)
-		if level == 0 or base == nil then return grouped(entry.capacity) end
-		return grouped(base) .. " -> " .. grouped(entry.capacity)
 	elseif tree == "upkeep" then
 		return percentAt(level) .. " of total"
 	end
@@ -360,19 +328,9 @@ local effectNext = function(entry : Entry, tree : string, level : integer) : str
 		if entry.radius == nil then return "no catchment circle" end
 		if entry.baseRadius == nil then return "?" end
 		return grouped(core.radius(entry.baseRadius, level - 1)) .. " -> " .. meters(core.radius(entry.baseRadius, level))
-	elseif tree == "capacity" then
-		local now, after = capacityAt(entry, level - 1), capacityAt(entry, level)
-		if now == nil then return "?" end
-		return grouped(now) .. " -> " .. grouped(after)
 	end
 	local result = percentAt(level - 1) .. " -> " .. percentAt(level)
 	return tree == "upkeep" and (result .. " of total") or result
-end
-
--- A station with no waiting places (a cargo-only station) gets no waiting capacity row: it takes no passengers, so the row
--- would only confuse. Levels bought before its waiting places were removed stay in its params and show again with them.
-local shows = function(entry : Entry, tree : string) : boolean
-	return tree ~= "capacity" or entry.capacity > 0
 end
 
 local heading = function(s : CardState, entry : Entry, rows : {TreeNodeId})
@@ -386,12 +344,10 @@ local summaryRows = function(s : CardState) : {TreeNodeId}
 	for _, entry in ipairs(s.entries) do
 		heading(s, entry, rows)
 		for _, tree in ipairs(core.trees) do
-			if shows(entry, tree) then
-				local level = entry.levels[tree]
-				local left : {TreeNodeId} = { icon(treeIcons[tree]) }
-				for _, node in ipairs(boxes(s, level)) do left[#left + 1] = node end
-				rows[#rows + 1] = row(left, text(effectNow(entry, tree)), rowTooltip(s, tree, level))
-			end
+			local level = entry.levels[tree]
+			local left : {TreeNodeId} = { icon(treeIcons[tree]) }
+			for _, node in ipairs(boxes(s, level)) do left[#left + 1] = node end
+			rows[#rows + 1] = row(left, text(effectNow(entry, tree)), rowTooltip(s, tree, level))
 		end
 	end
 	return rows
@@ -405,18 +361,13 @@ local nextRows = function(s : CardState) : {TreeNodeId}
 		for _, tree in ipairs(core.trees) do
 			local level = entry.levels[tree]
 			local tooltip = rowTooltip(s, tree, level)
-			if not shows(entry, tree) then
-				-- no row, as in the summary
-			elseif level >= core.maxLevel then
+			if level >= core.maxLevel then
 				rows[#rows + 1] = row({ icon(treeIcons[tree]), text(" Highest level") }, builtin.Component{}, tooltip)
 			else
 				local nextLevel = level + 1
 				local upkeep : TreeNodeId
 				if entry.upkeep ~= nil then
-					local hasWaiting = entry.capacity > 0
-					local now = core.upkeepFactor(core.chargedLevels(entry.levels, hasWaiting))
-					local later = core.upkeepFactor(core.chargedLevels(core.withLevel(entry.levels, tree, nextLevel), hasWaiting))
-					local after = entry.upkeep / now * later
+					local after = entry.upkeep / core.upkeepFactor(entry.levels) * core.upkeepFactor(core.withLevel(entry.levels, tree, nextLevel))
 					upkeep = builtin.BoxLayout{ orientation = builtin.type.Orientation.Horizontal, children = { icon(upkeepIcon), text(perYear(after)) } }
 				else
 					upkeep = text("?")
