@@ -433,12 +433,17 @@ end
 
 -- A row 24 pixels high with its pieces at the left edge and one at the right; the base windows push items apart with the
 -- "horizontal-spacer" class (gui_react_util.makeHorizontalSpacer in gui/main/gui_react_util.tl). The tooltip covers the row.
-local row = function(left : {TreeNodeId}, right : TreeNodeId, tooltip : string) : TreeNodeId
+-- With a middle piece, a spacer on each side of it centres it between the other two.
+local row = function(left : {TreeNodeId}, right : TreeNodeId, tooltip : string, middle? : TreeNodeId) : TreeNodeId
 	local styles = getDrawnStyles()
 	local children : {TreeNodeId} = {}
 	if styles ~= nil then children[1] = builtin.Component{ meta = { styleSheet = styles.rowHeight } } end
 	for _, node in ipairs(left) do children[#children + 1] = node end
 	children[#children + 1] = builtin.Component{ meta = { class = "horizontal-spacer" } }
+	if middle ~= nil then
+		children[#children + 1] = middle
+		children[#children + 1] = builtin.Component{ meta = { class = "horizontal-spacer" } }
+	end
 	children[#children + 1] = right
 	return builtin.Component{
 		meta = { tooltip = tooltip },
@@ -495,15 +500,16 @@ local effectNow = function(entry : Entry, tree : string) : string
 	return percentAt(level)
 end
 
--- What the next level changes: "230 -> 236 m", "-25% -> -30%"; "?" when the value without the levels is unknown.
+-- What the next level changes: "230 -> 236 m", "-25% -> -30%"; "?" when the value without the levels is unknown. Short, so
+-- the row has room for the upkeep and the buy button: the upkeep row leaves out the summary's "of total", which its tooltip
+-- gives.
 local effectNext = function(entry : Entry, tree : string, level : integer) : string
 	if tree == "catchment" then
-		if entry.radius == nil then return "no catchment circle" end
+		if entry.radius == nil then return "no circle" end
 		if entry.baseRadius == nil then return "?" end
 		return grouped(core.radius(entry.baseRadius, level - 1)) .. " -> " .. meters(core.radius(entry.baseRadius, level))
 	end
-	local result = percentAt(level - 1) .. " -> " .. percentAt(level)
-	return tree == "upkeep" and (result .. " of total") or result
+	return percentAt(level - 1) .. " -> " .. percentAt(level)
 end
 
 local heading = function(s : CardState, entry : Entry, rows : {TreeNodeId})
@@ -579,7 +585,9 @@ local summaryRows = function(s : CardState) : {TreeNodeId}
 	return rows
 end
 
--- Expanded: per tree what the next level changes, the upkeep the footer would show after it, and the buy button.
+-- Expanded: per tree what the next level changes at the left, the upkeep the footer would show after it in the middle, and
+-- the buy button at the right. The level number is left out for room (in game the row ran past the card's edge with it); the
+-- tooltip gives the level.
 local nextRows = function(s : CardState) : {TreeNodeId}
 	local rows : {TreeNodeId} = {}
 	for _, entry in ipairs(s.entries) do
@@ -591,19 +599,20 @@ local nextRows = function(s : CardState) : {TreeNodeId}
 				rows[#rows + 1] = row({ icon(treeIcons[tree]), text(" Highest level") }, builtin.Component{}, tooltip)
 			else
 				local nextLevel = level + 1
-				local right : {TreeNodeId} = {}
+				local upkeep : TreeNodeId
 				if entry.upkeep ~= nil then
 					local after = entry.upkeep / core.upkeepFactor(entry.levels) * core.upkeepFactor(core.withLevel(entry.levels, tree, nextLevel))
-					right = { icon(upkeepIcon), text(perYear(after)) }
+					upkeep = builtin.BoxLayout{ orientation = builtin.type.Orientation.Horizontal, children = { icon(upkeepIcon), text(perYear(after)) } }
 				else
-					right = { text("?") }
+					upkeep = text("?")
 				end
+				-- A gap before the button, so the upkeep never touches it when the row is full.
 				local styles = getDrawnStyles()
-				if styles ~= nil then right[#right + 1] = builtin.Component{ meta = { styleSheet = styles.buttonGap } } end
-				right[#right + 1] = buyButton(s, entry, tree)
-				rows[#rows + 1] = row({ icon(treeIcons[tree]), text(" Level " .. tostring(nextLevel) .. ": " .. effectNext(entry, tree, nextLevel)) },
-					builtin.BoxLayout{ orientation = builtin.type.Orientation.Horizontal, children = right },
-					tooltip .. "\nRight: the upkeep after level " .. tostring(nextLevel) .. " and its price.")
+				local buy = buyButton(s, entry, tree)
+				local right = styles ~= nil and builtin.BoxLayout{ orientation = builtin.type.Orientation.Horizontal,
+					children = { builtin.Component{ meta = { styleSheet = styles.buttonGap } }, buy } } or buy
+				rows[#rows + 1] = row({ icon(treeIcons[tree]), text(" " .. effectNext(entry, tree, nextLevel)) }, right,
+					tooltip .. "\nThe next level, level " .. tostring(nextLevel) .. ": what it changes, the upkeep after it and its price.", upkeep)
 			end
 		end
 	end

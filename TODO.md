@@ -38,6 +38,6 @@
 
 - [ ] Fix the spec: trees, shares, scope (airports, underground station, kerbside stops), the upkeep tree.
 - [x] Buying, from Depot Retrofits' 1.2 code: prices in `core.tl`, the game script `retrofits.script.tl` (buy queue, checks, rebuild, charge on landing), buy buttons and the "Not rebuilt" banner in the card. The probe 1 game script is retired (git history).
-- [ ] Test buying in game: a buy per tree on a rail station, a road station with tram tracks and a harbour (price as the card showed, charge in Finances under station construction and the right carrier, upkeep as the card said); greyed buttons (rank, money); a quick double click charges once; a refused rebuild shows the banner and charges nothing; the card's width with the buttons on a large station.
+- [ ] Test buying in game. Done on a rail station (11 buys, all four trees): prices, charges, upkeep and catchment as the card showed (findings, test results). Left: the new row layout; which Finances row the charge lands in; a road station with tram tracks and a harbour; greyed buttons (rank, money); a quick double click charges once; a refused rebuild shows the banner and charges nothing; buying while the game runs.
 - [ ] "Not rebuilt": show what is in the way (the proposal viewer needs an action area the station window does not give its cards; findings).
 - [ ] User guide, listing text, cover and gallery, release process (`docs/publishing.md` from Depot Retrofits).

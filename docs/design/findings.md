@@ -111,13 +111,13 @@ From a read-only survey of the station, catchment, capacity and emission script 
 
 ## Unknowns
 
-1. What a rebuild does to many waiting passengers and cargo (probe 1 had at most one waiting) and to vehicles loading at the platforms or a train halfway into one. Ids and lines are kept (probe 1).
+1. What a rebuild does to many waiting passengers and cargo (probe 1 had at most one waiting) and to vehicles loading at the platforms or a train halfway into one. Ids and lines are kept (probe 1). A train on the station's track outside the platforms steps back onto the next segment (buy test); a train at a platform stayed.
 2. Whether the Finances tab shows the levelled upkeep as the station window does (probe 1 checked the window and `calcMaintenanceForSubconstruction`).
 5. How often the game refuses a station rebuild, compared with depots. (Probe 1, then play.)
 7. Whether module edits, catenary swaps and the rail and street upgrade scripts keep the hidden params. (Probe 3.)
 8. Whether a kerbside stop (an edge object) can be replaced with new params. (Probe 4.)
 9. How much comfort and load speed change in play. Leave both out until measured.
-10. Whether a level's price, booked as `CONSTRUCTION` / `STATION` under the station's carrier, shows in the Finances tab where the player expects it.
+10. Which Finances row a level's price lands in: Investments has Roads, Tracks, Infrastructure, Warehouses and Vehicles, no Stations row. The charge itself is right (the earnings fell by the prices to the dollar).
 11. How stations from popular mods are shaped (whether they return a `station` table, use `terminateConstructionHook`, set `constructionType`).
 12. Whether the levels stack with other mods that change the same values. Read from their code (next section): they do if we wrap through `loadScript` and multiply the values we find; untested in game.
 
@@ -198,3 +198,21 @@ A copy of a large save from mod.io (May 1969, 229 stations, 153 lines, rank 13),
   - Window height: when the window is full (8 terminals; a bus terminal under an overcrowding notice) it keeps its height and the terminal list scrolls in less space; otherwise the window grows. Each window keeps its own open or closed card; a new window starts collapsed.
   - A cargo-only truck station showed waiting capacity "0" and "Level 1: 0 -> 0"; that row is now left out on stations with no waiting places (spec, "Buying a level").
 - **Second run**, with that row left out (no error line): the truck station shows four rows, collapsed and expanded; the passenger stations still show five. The two cargo stations the probe levelled to 5/5/5/5/5 (a rail station with four "All Cargo Types" terminals, a bulk truck station) show the levelled card for the first time: five white boxes per row, "200 -> 230 m" and "175 -> 201 m", "-25%", "-25% of total", and expanded "Level 6: 230 -> 236 m" with the upkeep after it. Their waiting capacity row showed "0 -> 0" and offered "Level 6: 0 -> 0" for 15% more upkeep; the row is now left out there too, levels or not, and waiting capacity levels add no upkeep while a station has no waiting places (spec, "Price and upkeep"; the `applied` log line now has `charged=` beside `levels=`).
+
+### 2026-11-01: buy buttons, first look
+
+The `Deutschland 20` save copy as in the card tests, logLevel `"full"`, with the buy build (game script, buttons, banner). Log: `local/logs/stdout-2026-11-01-buy1.txt`.
+
+- Loaded with no `Error while loading game script`; the game script logged `rank=13 earnedRank=13 rankSource=util`.
+- Hannover Station Ost (8 terminals, levels 0): upkeep $2,358,400, build price $14,150,400, next prices $2,830,080 catchment, $1,132,032 pollution, $1,698,048 noise, $3,537,600 upkeep, as the formulas give.
+- Expanded, "Level 1: 0% -> -5% of total", the upkeep and the button did not fit: the upkeep row's button ran past the card's edge ("$3,537,60"), and the upkeep figures started at a different place on each row. The rows now leave out "Level 1:" and "of total" and centre the upkeep between the effect and the button (not yet seen in game).
+- **11 buys on Hannover Station Ost** (construction 116227), the game paused throughout (May 9, 1969): upkeep 1 to 3, noise 1 to 3, pollution 1 and 2, catchment 1 to 3, one click every 2 to 6 seconds. Log: `local/logs/stdout-2026-11-01-buy2.txt`.
+  - Each buy landed and was charged within a second (`buy sent`, then `buy charged` with the stored levels as bought); no `notLanded`, no refusal, no "Not rebuilt". The construction id stayed 116227.
+  - Each price was the one the card showed (`shownPrice` = `price`), and the balance before each buy was the one before it less that price. The bottom bar's earnings went from $97,838,672 to $67,396,563, down $30,442,109, the 11 prices to the dollar. Carrier RAIL (`carrierSource=kind`).
+  - The build price held at $14,150,400 throughout (6 × upkeep ÷ the levels' factor), so later prices rose only by the 1.15 ladder: upkeep $3,537,600, $4,068,240, $4,678,476.
+  - Upkeep: each level landed at the upkeep the card had shown for it ($2,358,400 to $2,240,480 for upkeep 1; noise 1 $2,205,104; catchment 1 $3,107,190 against $3,107,192 shown, a $2 rounding difference). Script upkeep 737,000 × the factor (`applied` lines).
+  - Catchment: the largest circle 200, 206, 212, 218 m; the circle on the map grew.
+  - The emitters read 0 after the first rebuild and stayed 0 while paused (`noisePower=0 pollutionPower=0` in every later line), as probe 1 saw: the game's emissions script sets them again once time runs.
+  - Waiting passengers: as before each rebuild (the user watched; the waiting hall read 0 / 535 throughout).
+  - A train just outside the platforms, on the station's own track, stepped back to the next track segment at the first rebuild, with the game paused, and stayed there through the next ten; a train at a platform did not move. As when a road segment is removed: the game moves a vehicle on a replaced edge onto an adjacent one.
+  - The four Finances shots were taken before the first buy. Investments there has Roads, Tracks, Infrastructure, Warehouses and Vehicles, no Stations row; which row the charges went to is not seen yet.
