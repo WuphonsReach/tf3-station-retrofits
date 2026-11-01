@@ -1,0 +1,15 @@
+{
+    "authors": [
+        {
+            "name": "WuphonsReach",
+            "role": "CREATOR"
+        }
+    ],
+    "description": "Draft, not released. Stations get levels. A level widens the catchment area, raises the waiting capacity, or cuts pollution, noise or upkeep. You buy each level in the station's window.\n\nSource and notes: https://github.com/WuphonsReach/tf3-station-retrofits (MIT licence).",
+    "name": "Station Retrofits",
+    "summary": "Stations get levels for a wider catchment area, more waiting capacity, less pollution and noise, and lower upkeep.",
+    "tags": [
+        "Script Mod"
+    ],
+    "url": "https://github.com/WuphonsReach/tf3-station-retrofits"
+}

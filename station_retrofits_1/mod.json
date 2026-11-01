@@ -1,0 +1,19 @@
+{
+    "dependencies": null,
+    "incompatibilities": null,
+    "modId": "station_retrofits_1",
+    "options": null,
+    "params": [],
+    "postRunScript": {
+        "fileName": ""
+    },
+    "preRunScript": {
+        "fileName": ""
+    },
+    "revision": 1,
+    "runScript": {
+        "fileName": "station_retrofits_1::/mod.script@runFn"
+    },
+    "severityAdd": "None",
+    "severityRemove": "Warning"
+}

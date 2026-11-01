@@ -15,7 +15,13 @@ A planned Transport Fever 3 script mod: stations get levels (catchment radius, w
 5. In `../tf3-depot-retrofits`: its `CLAUDE.md` (architecture of the released mod), `docs/design/findings.md` (the tested facts this plan builds on) and `docs/design/spec.md`.
 6. `local/machine.md` (gitignored, may be missing on another machine): the game paths, saves and screenshot folder on this machine.
 
-There is no GitHub repo yet and no remote. Create one only when the user asks; then copy Depot Retrofits' rulesets and CI (its `CLAUDE.md`, "CI and repo rules"). Until then commits stay local, and only when the user asks.
+The repo is public on GitHub ([WuphonsReach/tf3-station-retrofits](https://github.com/WuphonsReach/tf3-station-retrofits), MIT); the mod is not on mod.io yet. `main` takes changes only through a pull request: branch from `origin/main` as `<YYYY-MM-DD>-<slug>`, and push or open a PR only when the user asks.
+
+## CI and repo rules
+
+Copied from Depot Retrofits (its `CLAUDE.md`, "CI and repo rules"), which has the detail. `.github/workflows/checks.yml` runs on every PR and every push to `main`: `python-checks` (`check_content_list.py`, `check_repo.py --strict`, `py_compile` of `tools/`) and `teal-syntax` (`tl gen` on each `.tl` under `content/`; `tl check` stays local, as the game's type definitions are not in the repo). Actions are pinned to full commit SHAs with the version in a trailing comment.
+
+The rulesets have no bypass actors, so they bind the owner too: `main` and `pr-checks` (changes reach `main` only through a PR; `pr-checks` requires `python-checks` and `teal-syntax`, so renaming a job means updating the ruleset in the same change), `trunks` (`main` cannot be deleted or force-pushed), `version-tags` (tags `v*.*` cannot be moved or deleted). Releases are immutable.
 
 ## Reusing Depot Retrofits
 
