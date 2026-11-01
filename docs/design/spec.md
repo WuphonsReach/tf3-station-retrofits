@@ -47,9 +47,9 @@ Notes:
 
 ## Buying a level
 
-- In a Retrofit tab in the station's window, next to its own tabs: one card per tree with the stock icon, a row of 15 level boxes, what the next level changes, the upkeep after it, and a buy button with the shopping cart and the price. Greyed when the rank is too low or unknown, or the balance is short. The game's upkeep footer below.
+- In a Retrofit card in the station's window (a tab would need `entityWindowScript`, which stops the station window from opening; see findings): one row per tree with the stock icon, a row of 15 level boxes, what the next level changes, the upkeep after it, and a buy button with the shopping cart and the price. Greyed when the rank is too low or unknown, or the balance is short. The game's upkeep footer below.
 - A click sends the buy; the game script rebuilds the station and books the price once the rebuild has landed; "Not rebuilt" with the proposal viewer when the game refuses it.
-- What a rebuild does to waiting passengers and cargo and to vehicles at the platforms is unknown (probe 1). If it loses the waiting passengers or cargo, say so on the tab.
+- What a rebuild does to waiting passengers and cargo and to vehicles at the platforms is unknown (probe 1). If it loses the waiting passengers or cargo, say so on the card.
 
 ## Rank gate
 

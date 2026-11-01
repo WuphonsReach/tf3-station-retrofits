@@ -18,9 +18,9 @@
 
 **Build.**
 
-- `mod.script.tl` `runFn`: a `loadConstruction` modifier that wraps the update script of the base modular rail station, street terminal and harbour (match by `fileName` for the probe), keeps the original reference, and declares five params (`station_retrofits_radius`, `_capacity`, `_pollution`, `_noise`, `_upkeep`; values 0 to 15; `yearFrom` 9999).
-- Wrapper: run the original update script; if the result has a `terminateConstructionHook`, replace it with one that runs the original and then scales the station subconstruction (`cargoStation` or `passengerStation`, whichever has a `station` table): every `catchmentAreas[i].radius`, `station.pool.capacity`, each terminal's capacity, both `metadata.emissions` states. Set `result.maintenanceCost` to the levelled total minus the modules' upkeep (`params.modules[*].metadata.maintenanceCost`), and let it go below 0. Log before and after for each value.
-- Game script: once per save (flag in `state`), pick up to 3 stations (one of each kind if present) and rebuild each with all five levels at 5, from `update`. Log a snapshot before the rebuild and after 1 game hour, 1 day, 7 days and 30 days.
+- `mod.script.tl` `runFn`: a `loadConstruction` modifier that only declares five params on the base modular rail station, street terminal and harbour (`station_retrofits_radius`, `_capacity`, `_pollution`, `_noise`, `_upkeep`; values 0 to 15; `yearFrom` 9999) and leaves `updateScript` alone; and a `loadScript` modifier that wraps the `updateFn` of their three base scripts (findings, "Seen in other mods' code"). Skip anything Depot Retrofits wraps.
+- Wrapper: run the original `updateFn`; if `params.modules` and `result.slots` are set, replace `result.terminateConstructionHook` (and every copy of it in the result's tables, for harbours) with one that runs the original once, caches its returns, and then scales, once per result, the station subconstruction (`cargoStation` or `passengerStation`, whichever has a `station` table): every `catchmentAreas[i].radius`, `station.pool.capacity`, each terminal's capacity, both `metadata.emissions` states. Set `result.maintenanceCost` to the levelled total minus the modules' upkeep (`params.modules[*].metadata.maintenanceCost`), and let it go below 0. Scale copies of the tables, multiplying the values found. Log before and after for each value.
+- Game script: once per save (flag in `state`), pick up to 3 stations (one of each kind if present) and rebuild each with all five levels at 5, from `update`, with a full copy of the construction's params. Log a snapshot before the rebuild and after 1 game hour, 1 day, 7 days and 30 days.
 
 **Snapshot fields.** Construction id; station entity ids and terminal count (`CONSTRUCTION` component, `STATION` components); `api.engine.util.station.calculateStationUsage` (pool capacity, terminal capacity, total used); waiting passengers and cargo per station; lines stopping there (line system) and vehicles at its terminals; catchment radii; emitter noise and pollution (live); the `MAINTENANCE_COST` component and `calcMaintenanceForSubconstruction`; the company balance just before and just after the rebuild lands.
 
@@ -36,12 +36,14 @@
 8. Emissions: the emitter's power follows the scaled states.
 9. The levels and values survive save and load (load the autosave; the wrapper should not be called on load).
 10. Refusals: note every rebuild the game refuses (`ProposalData error` lines) and what was in the way.
+11. The `loadScript` wrapper is reached: the wrapper's log line shows on each rebuild and on placing a new station, with the hidden params in `params`.
+12. The hook guard: count calls of the wrapped hook per result; a second call must not scale twice or crash.
 
-## Probe 2: Retrofit tab in the station window
+## Probe 2: Retrofit card in the station window
 
-**Build.** Set `entityWindowScript` on each wrapped station, returning the base construction window with a Retrofit tab added (copy Depot Retrofits' `retrofit_window.script.tl` and cut it down to a Summary card showing the stored levels).
+**Build.** A react plugin for `::StationGroupEowExtensionPoint` (a `.res.lua` plus a script, as other mods do; findings, "Seen in other mods' code") that shows a Summary card with the stored levels, found from the station group with `getConstructionEntityForStation`. Do not set `entityWindowScript`: it would stop the station window from opening.
 
-**Pass.** The station's own tabs are unchanged (lines, waiting passengers and cargo, everything the base window shows); the Retrofit tab shows on all three kinds, on a station placed during the session too.
+**Pass.** The station window is unchanged and the Retrofit card shows on all three kinds, on a station placed during the session too, and next to other mods' cards when they are active.
 
 ## Probe 3: rebuilds the game starts
 
@@ -51,7 +53,7 @@ By hand, on a levelled station from probe 1: add a platform, remove a module, sw
 
 ## Probe 4: kerbside stops
 
-**Build.** Wrap the six `street/small_stops/small_*.con.lua` (edge objects), scale the `streetTerminal` capacity and catchment radius, and have the game script rebuild one stop with `createProposalReplaceConstruction`.
+**Build.** Wrap the kerbside stop script (`street/small_stops/small_stops.script`; scale straight away, as stops have no hook), scale the `streetTerminal` capacity and catchment radius, and have the game script rebuild one stop with `replaceSegment` and a new `SimpleStreetProposal.EdgeObject` carrying the copied params (the method other mods use). Note: one mod replaces the stop script outright (last wins), so a stop tree may not reach every player.
 
 **Pass.** The proposal is accepted and the stop keeps its street, lines and waiting passengers. If the API refuses an edge object, or the stop is removed and placed again with new ids, leave stops out of scope.
 

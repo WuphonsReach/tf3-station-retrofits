@@ -2,11 +2,12 @@
 
 ## In short
 
-- **Status.** Nothing here has been tested in game yet. The station facts below come from reading the base game's station scripts (`base/content/stations/*.zip`, `scripts.zip`, `game_mechanics.zip`, `gui.zip`). The method is the one [Depot Retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits) uses, released and tested in game; its findings ([docs/design/findings.md](https://github.com/WuphonsReach/tf3-depot-retrofits/blob/main/docs/design/findings.md)) are the evidence for everything marked "from Depot Retrofits" below.
+- **Status.** In game so far: the empty mod scaffold loads cleanly, and the base station windows were looked at (test results at the bottom). Nothing about levels is tested. The station facts below come from reading the base game's station scripts (`base/content/stations/*.zip`, `scripts.zip`, `game_mechanics.zip`, `gui.zip`). The method is the one [Depot Retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits) uses, released and tested in game; its findings ([docs/design/findings.md](https://github.com/WuphonsReach/tf3-depot-retrofits/blob/main/docs/design/findings.md)) are the evidence for everything marked "from Depot Retrofits" below.
 - **Where the values come from.** A modular station's waiting capacity, comfort, catchment circles and emissions are all set by its construction's update script, in a `result.terminateConstructionHook` that the game runs after every module's own update script. The values are sums of the modules' `metadata` (`moreCapacity`, `comfortFactor`, `catchmentPassenger`/`catchmentCargo`, `emissionConfig`), which the hook reads from `params.modules`. So a wrapper that runs the original update script, then wraps the hook it returns, sees the station's final values and can scale them. Unlike the Roundhouse depot in Depot Retrofits, no module adds to these values after the wrapper.
-- **How a level would be applied.** As for depots: hidden level params on the construction, and a rebuild (`createProposalReplaceConstruction`) to apply a new level. No game command changes a station's capacity, catchment or comfort at run time (`api/tealdef/api/cmd.d.tl` has none).
+- **How a level would be applied.** As for depots: hidden level params on the construction, and a rebuild (`createProposalReplaceConstruction`) to apply a new level. Unlike depots, the station script should be wrapped through a `loadScript` modifier, not by rewriting the construction's `updateScript`, and the window should get a card, not a tab (see "Seen in other mods' code"). No game command changes a station's capacity, catchment or comfort at run time (`api/tealdef/api/cmd.d.tl` has none).
 - **Upkeep is the hard tree.** A base modular station's own script sets `cost = 0` and no upkeep: all its upkeep is the modules' `metadata.maintenanceCost`, which the game adds afterwards. Depot Retrofits cuts upkeep by lowering the script's own `maintenanceCost` and stops at 0, so on a modular station an upkeep level would do nothing. Whether the game accepts a negative `maintenanceCost` is unknown (probe in [probe-plan.md](probe-plan.md)).
 - **Kerbside stops are edge objects.** The six base bus and tram stops (`street/small_stops/*.con.lua`) declare `edgeObject` and put a `streetTerminal` on the street. Depot Retrofits skips edge objects on purpose. Whether a replace proposal works on one is unknown.
+- **Other mods already change these values.** Several script mods on mod.io set station catchment, waiting capacity or pollution, or add to the station window. Station Retrofits differs by being per station, bought and rank-gated, but it has to stack with them; how they apply their values is not checked (unknown 12). Notes on them are kept outside the repo.
 - **Biggest unknowns** (see the end): what a station rebuild does to waiting passengers and cargo and to vehicles at the platforms, whether it costs anything, how often the game refuses it (stations have more track and road connections than depots), and whether a negative upkeep works.
 
 ## Station types in the base game
@@ -31,7 +32,7 @@ Notes:
 - A warehouse is not a passenger or cargo station in the same sense: it holds `stocks`. Leave it out of a first version.
 - The engine's `ConstructionType` has station values (`STREET_STATION`, `RAIL_STATION`, `AIRPORT`, `HARBOR`, `STREET_STATION_CARGO`, `RAIL_STATION_CARGO`, `HARBOR_CARGO`, `AIRPORT_CARGO`; `api/tealdef/api/type.d.tl`). Whether the base station `.con` files set it is not checked; base depots did not. Stations from other mods may follow any shape, so detection should look at what the update script returns (a subconstruction with a `station` table, or a `streetTerminal`), as Depot Retrofits falls back to the `VEHICLE_DEPOT` component.
 - Only the rail station and the street terminal declare an `upgradeScript` (catenary swaps and module swaps, `modular_station.script.lua` `upgradeFn`). Whether it returns the other params unchanged, as the depots' upgrade scripts do, is not checked. Depot Retrofits found that the depot upgrade scripts kept its hidden params; this has to be checked for stations (probe 3).
-- No base station declares `entityWindowScript`, so the mod can set one, as Depot Retrofits does for depots.
+- No base station declares `entityWindowScript`. Setting one, as Depot Retrofits does for depots, would stop the station window from opening (see "Seen in other mods' code").
 
 ## What the update script sets
 
@@ -49,7 +50,7 @@ For the kerbside stops (`street/small_stops/small_stops.script.lua`): a `streetT
 ## How the game uses them at run time
 
 - **Emissions follow crowding.** `game_mechanics/emission/emissions.script.tl` updates every station's emitter (offset 2 in its update cycle). It reads `api.engine.util.station.calculateStationUsage(entity)` and slides between the two emission states by `totalUsed / (poolCapacity + terminalCapacity)`, clamped to 0..1. So a station with more capacity is less crowded and emits less, as a depot with a larger pool does. The eco factor is 1 for stations: the Industry Greenification tool cannot reach them (from Depot Retrofits).
-- **Station window.** A click on a station opens the construction window, whose tabs are the construction's subconstructions; for a station the content is `gui/entity_window/station_group/station_group.tl`, and the window takes `customTabs` (`gui/entity_window/make_entity_window.tl`, around line 130). Depot Retrofits' window script returns this base window with a Retrofit tab added; the same should work here (probe 2).
+- **Station window.** A click on a station opens the construction window, whose tabs are the construction's subconstructions; for a station the content is `gui/entity_window/station_group/station_group.tl`, and the window takes `customTabs` (`gui/entity_window/make_entity_window.tl`, around line 130). Depot Retrofits' window script returns this base window with a Retrofit tab added, but for stations that route hides the station window; a card in the station window's plugin extension point is the alternative (see "Seen in other mods' code", probe 2). Seen in game (test results): the base window has no tab bar; it shows a Waiting Hall row (waiting / pool capacity) on stations with a pool, then one row per terminal (cargo type, length in m, waiting / capacity on passenger terminals only, the lines that stop), a Loaded/Unloaded graph, the upkeep per year and a Configure button. Selecting a station draws its catchment circle and highlights the buildings inside it.
 
 ## Base module values
 
@@ -90,6 +91,20 @@ Each of these held for depots and maintenance buildings in game; each needs a ch
 - The game script's state is written from the simulation thread (`handleEvent`) and from about ten worker threads (`update`), each with its own copy; module variables do not persist. A pending buy counts as landed once the stored level is at least the bought one.
 - Rank: base `company_progression_util.tl` gives the claimed rank.
 
+## Seen in other mods' code (not tested by us)
+
+From a read-only survey of the station, catchment, capacity and emission script mods on mod.io (2026-11-01). Names and per-mod notes are kept outside the repo. Each point is what those mods' code does or says; none is tested here.
+
+- **Wrap the script, not the construction.** Several mods register a `loadScript` modifier keyed on the base station script paths and replace the script's `updateFn` with a wrapper. The base game loads station scripts with `util.useFn` (`scripts/construction/construction.script.tl:53`), so a `loadScript` wrapper runs whichever way the construction is reached, and it nests inside every `loadConstruction` wrapper. Rewriting a station's `updateScript` (Depot Retrofits' method) breaks other mods that recognise stations by `updateScript.fileName`, and mods that wrap with `loadConstruction` each need to be the outermost wrapper for their own window card to work. A `loadScript` wrapper avoids both. One mod reports that a `loadConstruction` modifier registered in a preRunScript had no effect.
+- **The hook runs only on modular stations.** The game calls `terminateConstructionHook` only when `params.modules ~= nil and result.slots ~= nil`; otherwise the values must be scaled straight away (helipads, kerbside stops). The hook can also be called more than once for one result, and a base hook is not repeatable (a second run adds lanes again: "Duplicate edge detected", then a crash): run the original once, cache its returns, and scale once. Harbours copy every result field, the hook included, into their station tables, so a wrapper must point those copies at itself too.
+- **Multiply what is there.** Every mod surveyed multiplies the values it finds (or adds a bonus); none recomputes from a base. Scaling the values present after the inner hook, never setting absolute values, stacks multiplicatively with all of them. Scale copies, never write scaled values back into params: the game may hand the same tables to several builds, which compounds.
+- **Copy all params on a rebuild.** The mods that rebuild stations deep-copy every existing param and set only their own keys, so foreign hidden params (ours included) survive their rebuilds. We must do the same. Some mods rebuild many stations by themselves (on first load, when their settings change, or after any nearby build), so a levelled station can be rebuilt, and get a new construction id, without our doing.
+- **The station window.** `gui/entity_window/view_manager_util.tl:158` (`wouldCreateView`) opens the construction instead of the station group when the construction has an `entityWindowScript`, so setting one on a station would stop the base station window, and other mods' cards in it, from opening. Mods add to the station window with a react plugin instead: a `.res.lua` with `type = "react-plugin ::StationGroupEowExtensionPoint"`, gathered by `station_group.tl:864` (`usePlugins`) and shown as cards after the notifications. Plugins stack. The same exists for depots (`::MaintenanceStationEowExtensionPoint`) and warehouses.
+- **Kerbside stops can be rebuilt in place**: two mods do it with `replaceSegment(edge)` and a new `SimpleStreetProposal.EdgeObject` carrying the copied params, with `context.player = -1`.
+- **Commands.** Two mods call `sendCommand` from `handleEvent` or with a callback, which Depot Retrofits found not to work; others queue in `handleEvent` and send from `postUpdate`. Either the Depot Retrofits finding is narrower than written, or those calls fail.
+- **Other APIs seen.** `api.engine.util.proposal.refreshConstruction(entity)` (rebuild with the same params); `api.cmd.makeEntitySetEmissionsCmd(entity, noise, pollution, radius, pollutionRadius)` (how the base emissions script sets a station's emitter); `api.engine.util.station.isStationOfType`; `streetConnectorSystem.getConstructionEntityForStation` (station group to construction).
+- **Buildings that are both.** Some modded depots contain stations (and the base airports and heliports contain hangar depots). Station Retrofits must skip any construction Depot Retrofits already wraps.
+
 ## Unknowns
 
 1. What a station rebuild does to: the station and terminal entity ids; lines that stop there; passengers and cargo waiting; vehicles loading at the platforms; a train halfway into a platform. (Probe 1.)
@@ -103,7 +118,29 @@ Each of these held for depots and maintenance buildings in game; each needs a ch
 9. How much comfort and load speed change in play. Leave both out until measured.
 10. Which `JournalEntry.Construction` value fits a station charge.
 11. How stations from popular mods are shaped (whether they return a `station` table, use `terminateConstructionHook`, set `constructionType`).
+12. Whether the levels stack with other mods that change the same values. Read from their code (next section): they do if we wrap through `loadScript` and multiply the values we find; untested in game.
+13. Whether two stations shown in one building (two windows, two entity ids, see the test results) are one construction or two; levels belong to a construction.
 
 ## Test results
 
-None yet.
+### 2026-11-01: scaffold load, base station windows, mod.io search
+
+Save `WR26A Giga-Tv3 1915 1031-1920 more mods` (29 mods, 110 stations, Jan 1915, rank Director), Station Retrofits 0.1-dev activated in its Mods tab, then saved as a new manual save. The scaffold only logs its start-up line.
+
+- **Load.** `STATION_RETROFITS version 0.1-dev logLevel=summary` on every load and sim pool, next to Depot Retrofits 1.3-dev and Best Before 1.4-dev. No `Error while loading game script`; the only errors were base texture and network (mod.io image) warnings.
+- **Base station windows** (no Retrofit tab yet; entity ids from the log's `Selected entity` lines, matched by time):
+
+| Station | Entity | Kind | Waiting hall | Terminals (length, waiting / capacity) | Upkeep / year |
+|---|---|---|---|---|---|
+| Peterlee Oil Refinery Station | 255628 | rail cargo | none shown | 80 m all cargo; 4 × 400 m liquid; no capacity shown | $531,250 |
+| Peterlee Refinery N Oil Delivery | 340363 | truck cargo | none shown | 4 × 20 m liquid | $101,250 |
+| Peterlee Refinery N Port Stop | 334446 | truck cargo | none shown | 4 × 30 m liquid | $151,250 |
+| Peterlee Refinery N Port | 78577 | harbour | 0 / 300 | 3 × passenger and cargo, 0 / 50 each | $122,500 |
+| Peterlee Station Transfer | 240471 | bus | 0 / 27 | 20 m, 1 / 48 | $51,250 |
+| Peterlee Refinery W Oil Delivery | 328109 | truck cargo | none shown | 4 × 20 m liquid | $101,250 |
+| Lower Peterlee Station | 44612 | tram | none shown | 2 × 30 m, 0 / 72 each | $77,500 |
+| Peterlee Station North | 331278 | tram, in the rail station's building | none shown | 90 m, 19 / 216 | $113,750 |
+| Upper Peterlee Station | 175556 | rail passenger | 0 / 310 | 160 m 1 / 256; 80 m 0 / 128 | $160,000 |
+
+  Cargo stations show no capacity at all, so the capacity tree has nothing in the base window to point at on them. Peterlee Station North and Upper Peterlee Station open from the same building with different ids (unknown 13).
+- **mod.io search** (Script Mod, "station", 30 results, and the in-game Mod Hub): no mod named Station Retrofits or close to it. Several change catchment, waiting capacity or pollution, or add to the station window (unknown 12).
