@@ -24,11 +24,28 @@ global record StationRetrofitsCore
 
 	radius : function(baseRadius : number, level : integer) : number
 	capacity : function(baseCapacity : number, level : integer) : integer
+	-- The value before the levels, from one the wrapper scaled; nil when the formula does not give it back (another mod also
+	-- scaled it).
+	baseRadius : function(radius : number, level : integer) : number
+	baseCapacity : function(capacity : integer, level : integer) : integer
+	-- A copy of levels with one tree set to level.
+	withLevel : function(levels : {string : integer}, tree : string, level : integer) : {string : integer}
 	emissionFactor : function(level : integer) : number
 	upkeepFactor : function(levels : {string : integer}) : number
+	-- The share of the base upkeep each level of a tree adds (no entry for the upkeep tree), and the share of the total each
+	-- upkeep level cuts.
+	upkeepShares : {string : number}
+	upkeepStep : number
 
 	-- Wraps a base station script's updateFn (the loadScript modifier in mod.script.tl). kind names the script in log lines;
 	-- say writes a log line; logFull adds the before and after values.
 	wrapUpdate : function(original : function(any, any) : any, kind : string, say : function(string), logFull : boolean)
 		: function(any, any) : any
+end
+
+-- The company rank module (station_retrofits_1/content/company_rank.tl, copied from Depot Retrofits).
+global record StationRetrofitsRank
+	-- The claimed rank, the earned rank and where they were read ("util", "state ..."); nil, nil and "unknown ..." when neither
+	-- read works.
+	read : function(player : Engine.Entity) : integer, integer, string
 end

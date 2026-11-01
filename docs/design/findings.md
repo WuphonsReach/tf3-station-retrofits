@@ -2,14 +2,15 @@
 
 ## In short
 
-- **Status.** Probe 1 ran in game (test results at the bottom): a `loadScript` wrapper levelled a rail station, a street terminal and a harbour by rebuilding them, and every value landed as the formulas say. Not yet tested: the window card, rebuilds the game starts, kerbside stops, and more than one game day of play. The station facts below come from reading the base game's station scripts (`base/content/stations/*.zip`, `scripts.zip`, `game_mechanics.zip`, `gui.zip`). The method is the one [Depot Retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits) uses, released and tested in game; its findings ([docs/design/findings.md](https://github.com/WuphonsReach/tf3-depot-retrofits/blob/main/docs/design/findings.md)) are the evidence for everything marked "from Depot Retrofits" below.
+- **Status.** Probes 1 and 2 ran in game (test results at the bottom): a `loadScript` wrapper levelled a rail station, a street terminal and a harbour by rebuilding them, every value landed as the formulas say and held for 30 days, and a Retrofit card in the base station window shows each station's levels. Not yet tested: rebuilds the game starts, kerbside stops, a crowded station during a rebuild, and loading a save with levelled stations. The station facts below come from reading the base game's station scripts (`base/content/stations/*.zip`, `scripts.zip`, `game_mechanics.zip`, `gui.zip`). The method is the one [Depot Retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits) uses, released and tested in game; its findings ([docs/design/findings.md](https://github.com/WuphonsReach/tf3-depot-retrofits/blob/main/docs/design/findings.md)) are the evidence for everything marked "from Depot Retrofits" below.
 - **Where the values come from.** A modular station's waiting capacity, comfort, catchment circles and emissions are all set by its construction's update script, in a `result.terminateConstructionHook` that the game runs after every module's own update script. The values are sums of the modules' `metadata` (`moreCapacity`, `comfortFactor`, `catchmentPassenger`/`catchmentCargo`, `emissionConfig`), which the hook reads from `params.modules`. So a wrapper that runs the original update script, then wraps the hook it returns, sees the station's final values and can scale them. Unlike the Roundhouse depot in Depot Retrofits, no module adds to these values after the wrapper.
 - **How a level would be applied.** As for depots: hidden level params on the construction, and a rebuild (`createProposalReplaceConstruction`) to apply a new level. Unlike depots, the station script should be wrapped through a `loadScript` modifier, not by rewriting the construction's `updateScript`, and the window should get a card, not a tab (see "Seen in other mods' code"). No game command changes a station's capacity, catchment or comfort at run time (`api/tealdef/api/cmd.d.tl` has none).
 - **Upkeep scales directly.** After a modular station's hook has run, `result.maintenanceCost` already holds the modules' upkeep (probe 1: it equalled their sum), and the game charges 1.25 × whatever the script leaves there (this save's settings). So every tree, the upkeep tree included, works by multiplying that value; no negative upkeep is needed.
 - **Kerbside stops are edge objects.** The six base bus and tram stops (`street/small_stops/*.con.lua`) declare `edgeObject` and put a `streetTerminal` on the street. Depot Retrofits skips edge objects on purpose. Whether a replace proposal works on one is unknown.
 - **Other mods already change these values.** Several script mods on mod.io set station catchment, waiting capacity or pollution, or add to the station window. Station Retrofits differs by being per station, bought and rank-gated, but it has to stack with them; how they apply their values is not checked (unknown 12). Notes on them are kept outside the repo.
 - **A rebuild is cheap and keeps the station** (probe 1): no charge, same construction and station ids, same line stops, the one waiting passenger kept. The station's emitter reads 0 right after a rebuild and is back, scaled, within a game day.
-- **Biggest unknowns** (see the end): what a rebuild does to a crowded station and to vehicles at the platforms, how often the game refuses one (stations have more track and road connections than depots), the window card, and rebuilds the game starts.
+- **The window card works** (probe 2): a react plugin for `::StationGroupEowExtensionPoint` adds a card to the base station window, which stays as it was. One card per station group; a tram terminal in a rail station's building is its own construction and group, so it gets its own card and levels.
+- **Biggest unknowns** (see the end): what a rebuild does to a crowded station and to vehicles at the platforms, how often the game refuses one (stations have more track and road connections than depots), and rebuilds the game starts.
 
 ## Station types in the base game
 
@@ -111,14 +112,12 @@ From a read-only survey of the station, catchment, capacity and emission script 
 1. What a rebuild does to many waiting passengers and cargo (probe 1 had at most one waiting) and to vehicles loading at the platforms or a train halfway into one. Ids and lines are kept (probe 1).
 2. Whether the Finances tab shows the levelled upkeep as the station window does (probe 1 checked the window and `calcMaintenanceForSubconstruction`).
 5. How often the game refuses a station rebuild, compared with depots. (Probe 1, then play.)
-6. Whether the base station window takes a Retrofit tab the way the depot window does. (Probe 2.)
 7. Whether module edits, catenary swaps and the rail and street upgrade scripts keep the hidden params. (Probe 3.)
 8. Whether a kerbside stop (an edge object) can be replaced with new params. (Probe 4.)
 9. How much comfort and load speed change in play. Leave both out until measured.
 10. Which `JournalEntry.Construction` value fits a station charge.
 11. How stations from popular mods are shaped (whether they return a `station` table, use `terminateConstructionHook`, set `constructionType`).
 12. Whether the levels stack with other mods that change the same values. Read from their code (next section): they do if we wrap through `loadScript` and multiply the values we find; untested in game.
-13. Whether two stations shown in one building (two windows, two entity ids, see the test results) are one construction or two; levels belong to a construction.
 
 ## Test results
 
@@ -141,7 +140,7 @@ Save `WR26A Giga-Tv3 1915 1031-1920 more mods` (29 mods, 110 stations, Jan 1915,
 | Peterlee Station North | 331278 | tram, in the rail station's building | none shown | 90 m, 19 / 216 | $113,750 |
 | Upper Peterlee Station | 175556 | rail passenger | 0 / 310 | 160 m 1 / 256; 80 m 0 / 128 | $160,000 |
 
-  Cargo stations show no capacity at all, so the capacity tree has nothing in the base window to point at on them. Peterlee Station North and Upper Peterlee Station open from the same building with different ids (unknown 13).
+  Cargo stations show no capacity at all, so the capacity tree has nothing in the base window to point at on them. Peterlee Station North and Upper Peterlee Station open from the same building with different ids: two constructions, a rail station and a street terminal, each in its own station group (probe 2).
 - **mod.io search** (Script Mod, "station", 30 results, and the in-game Mod Hub): no mod named Station Retrofits or close to it. Several change catchment, waiting capacity or pollution, or add to the station window (unknown 12).
 
 ### 2026-11-01: probe 1, rebuild with fixed levels
@@ -160,4 +159,28 @@ Test copies of `WR26A Giga-Tv3 1915 1101-1134 more mods` (Jan 1915, 110 stations
 - **The station window** showed the same: waiting hall 465 and terminals 384 + 192 at Upper Peterlee, terminals 108 + 108 at Lower Peterlee, and the three upkeep figures.
 - **Rebuilds** landed within a second, cost nothing (balance unchanged, also for the unchanged rebuild), and kept the construction id, the station ids and the line stops. The game script ran while the game was paused.
 - **Catchment centres.** The circles sit on the station's modules (the main building, stairs, entrances), not on the construction's marker: a station window's circle is not centred on the beam of light. A map of the saves drawn with `tf3map`, with the logged circles on top, shows the 230 m main-building circle doing nearly all the work at the rail station; the 85 m circles lie mostly inside it.
-- **Not seen:** a crowded station (at most one passenger waiting), a vehicle at a platform during the rebuild, a refusal, 7 and 30 days.
+- **Not seen:** a crowded station (at most one passenger waiting), a vehicle at a platform during the rebuild, a refusal.
+
+### 2026-11-01: probe 2, Retrofit card; probe 1 again for 30 days
+
+A fresh copy of `WR26A Giga-Tv3 1915 1101-1134 more mods`, logLevel `"full"`, with the card added. The probe 1 game script ran again on load (it acts once per save) and repeated the second run's values exactly. Played on at high speed past every watch; saved as `WR26A Giga-Tv3 1915 1101-1303-test`.
+
+- **Load.** `card loaded ready=true styleutil=true` on the first station window. No `Recipe not found`, no `card … Error` line, no `Error while loading game script`, no `ProposalData error`.
+- **Card, by window** (screenshots matched to the log's `Selected entity` and `card shown` lines):
+
+| Window | Construction | Kind | Card |
+|---|---|---|---|
+| Upper Peterlee Station | 175556 | rail passenger | 5/5/5/5/5, first card above the waiting hall; footer $390,000 |
+| Peterlee Station North | 331166 | tram, in the rail station's building | 0/0/0/0/0 |
+| Lower Peterlee Station | 216491 | tram | 5/5/5/5/5; footer $188,906 |
+| Peterlee Refinery N Port | 305819 | harbour | 0/0/0/0/10; footer $61,250 |
+| Peterlee Refinery N Port Stop, … N Oil Delivery, Peterlee Station | 324497, 340363, 191943 | truck cargo | 0/0/0/0/0 |
+| Thornwick Station, Holbeach Station Sidings | 125335, 15416 | rail passenger | 0/0/0/0/0 |
+| Lower Holbeach Station, Holbeach Station Central, Holbeach Station Halt | 117761, 95594, 323674 | tram | 0/0/0/0/0 |
+| Holbeach Station, Mill Lane, Highfield Road | none | kerbside stops | no card; base window as before |
+| Holbeach Tram Depot | 348469 | depot | no card; Depot Retrofits' tab as before |
+
+  The rest of each window (waiting hall, terminals, graph, upkeep footer, Configure) was unchanged. Every group seen held one construction. Not seen: a station placed during the session, a group of two constructions, another mod's station, another mod's card beside ours.
+- **30 days** (watch offsets in game clock, 4,000 a day at calendar speed 1x): the levels, circles, capacities and upkeep held at 1 day, 7 days and 30 days. Buildings in reach stayed 12 (rail) and 85 (street, 72 before). Emitters at 30 days: rail 5.32 / 34.02, street 6.14 / 38.37 (base × 0.75 plus a little crowding). Waiting passengers grew to 13 (rail) and 5 (street), well under the levelled capacity. Every rebuild, the unchanged one included, cost $0.
+- **Beam and circles.** A `tf3map` map of the 1303 save, with the logged circles and the construction's origin (`origin=` in the probe snapshot) on top: the origin sits on the rail station's tracks, on the tram terminal and on the harbour's building, which is where the beam of light stands in the screenshots. The circle centres are elsewhere: the rail station's 230 m circle is 72 m from the origin, the street terminal's two circles 15 m and 35 m, the harbour's circle 33 m (on the quay edge). So the beam marks the construction's origin, and the circles centre on the modules that carry catchment.
+

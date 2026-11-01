@@ -47,7 +47,10 @@ Notes:
 
 ## Buying a level
 
-- In a Retrofit card in the station's window (a tab would need `entityWindowScript`, which stops the station window from opening; see findings): one row per tree with the stock icon, a row of 15 level boxes, what the next level changes, the upkeep after it, and a buy button with the shopping cart and the price. Greyed when the rank is too low or unknown, or the balance is short. The game's upkeep footer below.
+- In a collapsible Retrofit card in the station's window (a tab would need `entityWindowScript`, which stops the station window from opening; see findings). The station window keeps one collapsible card open at a time, and the card starts collapsed.
+  - **Collapsed (summary):** one row per tree: the stock icon, 15 level boxes (bought, allowed by the rank, locked) and, at the right edge, what the levels do now ("200 -> 230 m" for the largest catchment circle, "310 -> 465" for all waiting places, "-25%" for pollution and noise, "-25% of total" for upkeep).
+  - **Expanded:** one row per tree: what the next level changes, the upkeep after it, and a buy button with the shopping cart and the price. Greyed when the rank is too low or unknown, or the balance is short. The game's own upkeep footer stays where it is in the window.
+  - **Tooltip, on the whole row:** the tree's name and "Level 4/7 (max 15)" as in Depot Retrofits (the level over what the rank allows, "(max 15)" only while the rank is lower), then what a level does and what upkeep it adds, one sentence a line.
 - A click sends the buy; the game script rebuilds the station and books the price once the rebuild has landed; "Not rebuilt" with the proposal viewer when the game refuses it.
 - What a rebuild does to waiting passengers and cargo and to vehicles at the platforms is unknown (probe 1). If it loses the waiting passengers or cargo, say so on the card.
 
