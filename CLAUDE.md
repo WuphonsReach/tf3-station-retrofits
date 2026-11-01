@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A planned Transport Fever 3 script mod: stations get levels (catchment radius, waiting capacity, pollution, noise, upkeep), bought in the station's window. It is the sibling of Depot Retrofits, the same author's released mod for depots, checked out next to this repo at `../tf3-depot-retrofits` ([WuphonsReach/tf3-depot-retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits), MIT, mod.io id 6495416). This repo starts from that mod's method and code.
+A planned Transport Fever 3 script mod: stations get levels (catchment radius, pollution, noise, upkeep), bought in the station's window. It is the sibling of Depot Retrofits, the same author's released mod for depots, checked out next to this repo at `../tf3-depot-retrofits` ([WuphonsReach/tf3-depot-retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits), MIT, mod.io id 6495416). This repo starts from that mod's method and code.
 
 **Status: design only.** Read these first, in this order:
 
@@ -29,7 +29,7 @@ Depot Retrofits is MIT and by the same author, so its code may be copied. Its 1.
 
 | Depot Retrofits (`depot_retrofits_1/content/`) | Here |
 |---|---|
-| `levels.tl` (trees, formulas) | new trees: radius, capacity, pollution, noise, upkeep; same price ladder |
+| `levels.tl` (trees, formulas) | new trees: radius, pollution, noise, upkeep; same price ladder |
 | `company_rank.tl` (rank gate) | as is |
 | `settings.tl` (`logLevel`) | as is |
 | `mod.script.tl` (`loadConstruction` modifier, depot detection) | `loadConstruction` only for the hidden params; a `loadScript` modifier wraps the base station scripts' `updateFn` and the `terminateConstructionHook` it returns (findings, "Seen in other mods' code") |

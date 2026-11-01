@@ -1,4 +1,4 @@
--- The five level trees, the formulas of docs/design/spec.md and the wrapper of a base station script's updateFn, shared by
+-- The four level trees, the formulas of docs/design/spec.md and the wrapper of a base station script's updateFn, shared by
 -- the mod script and the game script (each loads it with ug_require under pcall). No game API calls, so it loads the same in
 -- every Lua state.
 --
@@ -12,10 +12,9 @@
 
 local core : StationRetrofitsCore = {
 	maxLevel = 15,
-	trees = { "catchment", "capacity", "pollution", "noise", "upkeep" },
+	trees = { "catchment", "pollution", "noise", "upkeep" },
 	paramKeys = {
 		catchment = "stationRetrofitsCatchment",
-		capacity = "stationRetrofitsCapacity",
 		pollution = "stationRetrofitsPollution",
 		noise = "stationRetrofitsNoise",
 		upkeep = "stationRetrofitsUpkeep",
@@ -32,7 +31,6 @@ local core : StationRetrofitsCore = {
 	},
 	names = {
 		catchment = "Catchment radius",
-		capacity = "Waiting capacity",
 		pollution = "Pollution",
 		noise = "Noise",
 		upkeep = "Upkeep",
@@ -41,10 +39,9 @@ local core : StationRetrofitsCore = {
 
 local catchmentStep = 0.03
 local minCatchmentStep = 5
-local capacityStep = 0.10
 local emissionStep = 0.05
 -- Each level adds this share of the base upkeep; the upkeep tree cuts the total.
-local upkeepPerLevel : {string : number} = { catchment = 0.15, capacity = 0.15, pollution = 0.05, noise = 0.10 }
+local upkeepPerLevel : {string : number} = { catchment = 0.15, pollution = 0.05, noise = 0.10 }
 local upkeepStep = 0.05
 core.upkeepShares = upkeepPerLevel
 core.upkeepStep = upkeepStep
@@ -93,26 +90,12 @@ function core.radius(baseRadius : number, level : integer) : number
 	return baseRadius + math.max(baseRadius * catchmentStep * level, minCatchmentStep * level)
 end
 
--- A capacity of 0 or less stays as it is: the level widens what is there, it does not add a waiting area.
-function core.capacity(baseCapacity : number, level : integer) : integer
-	if baseCapacity <= 0 then return round(baseCapacity) end
-	return round(baseCapacity + math.max(baseCapacity * capacityStep * level, level))
-end
-
 -- The value before the levels, from a value the wrapper scaled: whichever branch of the formula gives back the value. nil when
 -- neither does (another mod scaled it too, or the value is not ours).
 function core.baseRadius(radius : number, level : integer) : number
 	if level <= 0 then return radius end
 	for _, base in ipairs({ radius / (1 + catchmentStep * level), radius - minCatchmentStep * level }) do
 		if base > 0 and math.abs(core.radius(base, level) - radius) < 0.01 then return base end
-	end
-	return nil
-end
-
-function core.baseCapacity(capacity : integer, level : integer) : integer
-	if level <= 0 or capacity <= 0 then return capacity end
-	for _, base in ipairs({ round(capacity / (1 + capacityStep * level)), capacity - level }) do
-		if base > 0 and core.capacity(base, level) == capacity then return base end
 	end
 	return nil
 end
@@ -132,13 +115,6 @@ function core.upkeepFactor(values : {string : integer}) : number
 	local added = 0.0
 	for tree, share in pairs(upkeepPerLevel) do added = added + share * (values[tree] or 0) end
 	return (1 + added) * (1 - upkeepStep * (values.upkeep or 0))
-end
-
--- The levels the upkeep is charged for: waiting capacity levels cost nothing while the station has no waiting places (a
--- cargo-only station), as they do nothing there. They stay in the params and are charged again once it has some.
-function core.chargedLevels(values : {string : integer}, hasWaiting : boolean) : {string : integer}
-	if hasWaiting or (values.capacity or 0) == 0 then return values end
-	return core.withLevel(values, "capacity", 0)
 end
 
 local copyTable = function(source : {any : any}) : {any : any}
@@ -206,28 +182,6 @@ local scaleNode = function(node : {string : any}, values : {string : integer})
 		end
 		station.catchmentAreas = areas
 	end
-	if values.capacity > 0 then
-		if type(station.pool) == "table" then
-			local pool = copyTable(station.pool as {any : any}) as {string : any}
-			local capacity = tonumber(pool.capacity)
-			if capacity ~= nil then pool.capacity = core.capacity(capacity, values.capacity) end
-			station.pool = pool
-		end
-		if type(station.terminals) == "table" then
-			local terminals : {any} = {}
-			for i, terminal in ipairs(station.terminals as {any}) do
-				if type(terminal) == "table" then
-					local copy = copyTable(terminal as {any : any}) as {string : any}
-					local capacity = tonumber(copy.capacity)
-					if capacity ~= nil then copy.capacity = core.capacity(capacity, values.capacity) end
-					terminals[i] = copy
-				else
-					terminals[i] = terminal
-				end
-			end
-			station.terminals = terminals
-		end
-	end
 	local metadata = node.metadata as {string : any}
 	if (values.noise > 0 or values.pollution > 0) and type(metadata) == "table" and type(metadata.emissions) == "table" then
 		metadata = copyTable(metadata as {any : any}) as {string : any}
@@ -248,17 +202,6 @@ local scaleNode = function(node : {string : any}, values : {string : integer})
 	end
 end
 
--- The node's waiting places: its pool and terminals, counting only capacities above 0 (cargo terminals have none).
-local waitingPlaces = function(node : {string : any}) : number
-	local station = node.station as {string : any}
-	local total = 0.0
-	if type(station.pool) == "table" then total = total + math.max(tonumber((station.pool as {string : any}).capacity) or 0, 0) end
-	for _, terminal in ipairs((station.terminals or {}) as {{string : any}}) do
-		if type(terminal) == "table" then total = total + math.max(tonumber(terminal.capacity) or 0, 0) end
-	end
-	return total
-end
-
 -- The upkeep the modules add, which the game adds to the script's own maintenanceCost.
 local modulesUpkeep = function(params : {string : any}) : number
 	local total = 0.0
@@ -274,11 +217,9 @@ end
 local apply = function(result : {string : any}, params : {string : any}, values : {string : integer}, kind : string,
 	say : function(string), logFull : boolean)
 	local nodes = stationNodes(result)
-	local hasWaiting = false
 	for i, node in ipairs(nodes) do
 		local before = logFull and describeNode(node) or nil
 		scaleNode(node, values)
-		if waitingPlaces(node) > 0 then hasWaiting = true end
 		if logFull then
 			say("scale kind=" .. kind .. " node=" .. tostring(i) .. " levels=" .. core.describe(values) .. " before " .. before
 				.. " after " .. describeNode(node))
@@ -287,10 +228,9 @@ local apply = function(result : {string : any}, params : {string : any}, values 
 	-- By the time the hook has run, the result's maintenanceCost already holds the modules' upkeep (probe 1: it equalled
 	-- their sum, and the game charged 1.25 times whatever was set), so the levels scale it directly.
 	local base = tonumber(result.maintenanceCost) or 0
-	local charged = core.chargedLevels(values, hasWaiting)
-	result.maintenanceCost = round(base * core.upkeepFactor(charged))
-	say("applied kind=" .. kind .. " levels=" .. core.describe(values) .. " charged=" .. core.describe(charged)
-		.. " stations=" .. tostring(#nodes) .. " upkeepBase=" .. tostring(base) .. " upkeepModules=" .. tostring(modulesUpkeep(params))
+	result.maintenanceCost = round(base * core.upkeepFactor(values))
+	say("applied kind=" .. kind .. " levels=" .. core.describe(values) .. " stations=" .. tostring(#nodes)
+		.. " upkeepBase=" .. tostring(base) .. " upkeepModules=" .. tostring(modulesUpkeep(params))
 		.. " maintenanceCost=" .. tostring(result.maintenanceCost))
 end
 
