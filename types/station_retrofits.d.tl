@@ -32,6 +32,8 @@ global record StationRetrofitsCore
 	withLevel : function(levels : {string : integer}, tree : string, level : integer) : {string : integer}
 	emissionFactor : function(level : integer) : number
 	upkeepFactor : function(levels : {string : integer}) : number
+	-- The levels the upkeep is charged for: no waiting capacity levels while the station has no waiting places.
+	chargedLevels : function(levels : {string : integer}, hasWaiting : boolean) : {string : integer}
 	-- The share of the base upkeep each level of a tree adds (no entry for the upkeep tree), and the share of the total each
 	-- upkeep level cuts.
 	upkeepShares : {string : number}

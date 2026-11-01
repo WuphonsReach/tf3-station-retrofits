@@ -134,6 +134,13 @@ function core.upkeepFactor(values : {string : integer}) : number
 	return (1 + added) * (1 - upkeepStep * (values.upkeep or 0))
 end
 
+-- The levels the upkeep is charged for: waiting capacity levels cost nothing while the station has no waiting places (a
+-- cargo-only station), as they do nothing there. They stay in the params and are charged again once it has some.
+function core.chargedLevels(values : {string : integer}, hasWaiting : boolean) : {string : integer}
+	if hasWaiting or (values.capacity or 0) == 0 then return values end
+	return core.withLevel(values, "capacity", 0)
+end
+
 local copyTable = function(source : {any : any}) : {any : any}
 	local copy : {any : any} = {}
 	for key, value in pairs(source) do copy[key] = value end
@@ -241,6 +248,17 @@ local scaleNode = function(node : {string : any}, values : {string : integer})
 	end
 end
 
+-- The node's waiting places: its pool and terminals, counting only capacities above 0 (cargo terminals have none).
+local waitingPlaces = function(node : {string : any}) : number
+	local station = node.station as {string : any}
+	local total = 0.0
+	if type(station.pool) == "table" then total = total + math.max(tonumber((station.pool as {string : any}).capacity) or 0, 0) end
+	for _, terminal in ipairs((station.terminals or {}) as {{string : any}}) do
+		if type(terminal) == "table" then total = total + math.max(tonumber(terminal.capacity) or 0, 0) end
+	end
+	return total
+end
+
 -- The upkeep the modules add, which the game adds to the script's own maintenanceCost.
 local modulesUpkeep = function(params : {string : any}) : number
 	local total = 0.0
@@ -256,9 +274,11 @@ end
 local apply = function(result : {string : any}, params : {string : any}, values : {string : integer}, kind : string,
 	say : function(string), logFull : boolean)
 	local nodes = stationNodes(result)
+	local hasWaiting = false
 	for i, node in ipairs(nodes) do
 		local before = logFull and describeNode(node) or nil
 		scaleNode(node, values)
+		if waitingPlaces(node) > 0 then hasWaiting = true end
 		if logFull then
 			say("scale kind=" .. kind .. " node=" .. tostring(i) .. " levels=" .. core.describe(values) .. " before " .. before
 				.. " after " .. describeNode(node))
@@ -267,9 +287,10 @@ local apply = function(result : {string : any}, params : {string : any}, values 
 	-- By the time the hook has run, the result's maintenanceCost already holds the modules' upkeep (probe 1: it equalled
 	-- their sum, and the game charged 1.25 times whatever was set), so the levels scale it directly.
 	local base = tonumber(result.maintenanceCost) or 0
-	result.maintenanceCost = round(base * core.upkeepFactor(values))
-	say("applied kind=" .. kind .. " levels=" .. core.describe(values) .. " stations=" .. tostring(#nodes)
-		.. " upkeepBase=" .. tostring(base) .. " upkeepModules=" .. tostring(modulesUpkeep(params))
+	local charged = core.chargedLevels(values, hasWaiting)
+	result.maintenanceCost = round(base * core.upkeepFactor(charged))
+	say("applied kind=" .. kind .. " levels=" .. core.describe(values) .. " charged=" .. core.describe(charged)
+		.. " stations=" .. tostring(#nodes) .. " upkeepBase=" .. tostring(base) .. " upkeepModules=" .. tostring(modulesUpkeep(params))
 		.. " maintenanceCost=" .. tostring(result.maintenanceCost))
 end
 
