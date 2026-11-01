@@ -1,10 +1,13 @@
 {
     "archives": null,
     "files": [
+        "company_rank.tl",
         "core.tl",
         "mod.script.tl",
         "probe.gs.lua",
         "probe.script.tl",
+        "retrofit_card.res.lua",
+        "retrofit_card.script.tl",
         "settings.tl"
     ]
 }

@@ -41,9 +41,9 @@
 
 ## Probe 2: Retrofit card in the station window
 
-**Build.** A react plugin for `::StationGroupEowExtensionPoint` (a `.res.lua` plus a script, as other mods do; findings, "Seen in other mods' code") that shows a Summary card with the stored levels, found from the station group with `getConstructionEntityForStation`. Do not set `entityWindowScript`: it would stop the station window from opening.
+**Build.** `retrofit_card.res.lua` and `retrofit_card.script.tl`: a react plugin for `::StationGroupEowExtensionPoint` that shows one collapsible Retrofit card per station group: collapsed, a row per tree with the level boxes and what the levels do now; expanded, what the next level changes and the upkeep after it (no buy button yet). Each wrapped construction in the group gets its rows (found with `getConstructionEntityForStation`; a heading per construction when the group holds more than one). Its condition shows the card only for the player's stations with at least one wrapped construction. The game calls a plugin's recipe without checking it exists and calls its condition unguarded (`gui/main/gui_react_util.tl`, `usePlugins`), so the condition never throws and is false when a load failed. Do not set `entityWindowScript`: it would stop the station window from opening. At `"full"` the card logs `card shown group=…` with, per construction, the levels, the number of stations, circles and terminals, the largest circle and the waiting places, once per change; on a big station these show what the card reads on every step.
 
-**Pass.** The station window is unchanged and the Retrofit card shows on all three kinds, on a station placed during the session too, and next to other mods' cards when they are active.
+**Pass.** The station window is unchanged and the Retrofit card shows on all three kinds with the levels probe 1 stored (5/5/5/5/5 on the rail and street stations, 0/0/0/0/10 on the harbour, 0/0/0/0/0 elsewhere), on a station placed during the session too, on a group of a station and a terminal joined, not on a kerbside stop or a competitor's station, and next to other mods' cards when they are active. The log has no `Recipe not found` or `card … Error` lines.
 
 ## Probe 3: rebuilds the game starts
 

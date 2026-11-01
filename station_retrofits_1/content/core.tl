@@ -46,6 +46,8 @@ local emissionStep = 0.05
 -- Each level adds this share of the base upkeep; the upkeep tree cuts the total.
 local upkeepPerLevel : {string : number} = { catchment = 0.15, capacity = 0.15, pollution = 0.05, noise = 0.10 }
 local upkeepStep = 0.05
+core.upkeepShares = upkeepPerLevel
+core.upkeepStep = upkeepStep
 
 function core.kindOf(fileName : string, kinds : {string : string}) : string
 	local path = (fileName or ""):gsub("^.-::", ""):gsub("%.lua$", ""):gsub("^/", "")
@@ -95,6 +97,31 @@ end
 function core.capacity(baseCapacity : number, level : integer) : integer
 	if baseCapacity <= 0 then return round(baseCapacity) end
 	return round(baseCapacity + math.max(baseCapacity * capacityStep * level, level))
+end
+
+-- The value before the levels, from a value the wrapper scaled: whichever branch of the formula gives back the value. nil when
+-- neither does (another mod scaled it too, or the value is not ours).
+function core.baseRadius(radius : number, level : integer) : number
+	if level <= 0 then return radius end
+	for _, base in ipairs({ radius / (1 + catchmentStep * level), radius - minCatchmentStep * level }) do
+		if base > 0 and math.abs(core.radius(base, level) - radius) < 0.01 then return base end
+	end
+	return nil
+end
+
+function core.baseCapacity(capacity : integer, level : integer) : integer
+	if level <= 0 or capacity <= 0 then return capacity end
+	for _, base in ipairs({ round(capacity / (1 + capacityStep * level)), capacity - level }) do
+		if base > 0 and core.capacity(base, level) == capacity then return base end
+	end
+	return nil
+end
+
+function core.withLevel(values : {string : integer}, tree : string, level : integer) : {string : integer}
+	local copy : {string : integer} = {}
+	for _, t in ipairs(core.trees) do copy[t] = values[t] end
+	copy[tree] = level
+	return copy
 end
 
 function core.emissionFactor(level : integer) : number
