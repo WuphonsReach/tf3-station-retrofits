@@ -369,6 +369,12 @@ local effectNext = function(entry : Entry, tree : string, level : integer) : str
 	return tree == "upkeep" and (result .. " of total") or result
 end
 
+-- A station with no waiting places (a cargo-only station) gets no waiting capacity row: it takes no passengers, so the row
+-- would only confuse. Levels bought before its waiting places were removed stay in its params and show again with them.
+local shows = function(entry : Entry, tree : string) : boolean
+	return tree ~= "capacity" or entry.capacity > 0
+end
+
 local heading = function(s : CardState, entry : Entry, rows : {TreeNodeId})
 	-- A group can hold several constructions (a train station and a bus terminal joined): each gets its own heading.
 	if #s.entries > 1 then rows[#rows + 1] = text(kindNames[entry.kind] or entry.kind) end
@@ -380,10 +386,12 @@ local summaryRows = function(s : CardState) : {TreeNodeId}
 	for _, entry in ipairs(s.entries) do
 		heading(s, entry, rows)
 		for _, tree in ipairs(core.trees) do
-			local level = entry.levels[tree]
-			local left : {TreeNodeId} = { icon(treeIcons[tree]) }
-			for _, node in ipairs(boxes(s, level)) do left[#left + 1] = node end
-			rows[#rows + 1] = row(left, text(effectNow(entry, tree)), rowTooltip(s, tree, level))
+			if shows(entry, tree) then
+				local level = entry.levels[tree]
+				local left : {TreeNodeId} = { icon(treeIcons[tree]) }
+				for _, node in ipairs(boxes(s, level)) do left[#left + 1] = node end
+				rows[#rows + 1] = row(left, text(effectNow(entry, tree)), rowTooltip(s, tree, level))
+			end
 		end
 	end
 	return rows
@@ -397,13 +405,18 @@ local nextRows = function(s : CardState) : {TreeNodeId}
 		for _, tree in ipairs(core.trees) do
 			local level = entry.levels[tree]
 			local tooltip = rowTooltip(s, tree, level)
-			if level >= core.maxLevel then
+			if not shows(entry, tree) then
+				-- no row, as in the summary
+			elseif level >= core.maxLevel then
 				rows[#rows + 1] = row({ icon(treeIcons[tree]), text(" Highest level") }, builtin.Component{}, tooltip)
 			else
 				local nextLevel = level + 1
 				local upkeep : TreeNodeId
 				if entry.upkeep ~= nil then
-					local after = entry.upkeep / core.upkeepFactor(entry.levels) * core.upkeepFactor(core.withLevel(entry.levels, tree, nextLevel))
+					local hasWaiting = entry.capacity > 0
+					local now = core.upkeepFactor(core.chargedLevels(entry.levels, hasWaiting))
+					local later = core.upkeepFactor(core.chargedLevels(core.withLevel(entry.levels, tree, nextLevel), hasWaiting))
+					local after = entry.upkeep / now * later
 					upkeep = builtin.BoxLayout{ orientation = builtin.type.Orientation.Horizontal, children = { icon(upkeepIcon), text(perYear(after)) } }
 				else
 					upkeep = text("?")
@@ -434,14 +447,15 @@ local vertical = function(rows : {TreeNodeId}) : TreeNodeId
 end
 
 if ready then
-	-- The expanded part, as its own recipe: the card builds it only while it is open.
+	-- The expanded part, as its own recipe: the card builds it only while it is open. A recipe's root must be a layout
+	-- ("Recipe child must be a layout"), so it returns the BoxLayout itself, not a Component around it.
 	local NextLevels = react.RegisterRecipe("StationRetrofitsNextLevels", function(param : NextParam) : TreeNodeId
 		local ok, rows = pcall(nextRows, param.state)
 		if not ok then
 			say("card nextError error=" .. tostring(rows))
 			rows = { text("The next levels could not be shown (see the game log).") }
 		end
-		return vertical(rows)
+		return builtin.BoxLayout{ orientation = builtin.type.Orientation.Vertical, children = rows }
 	end)
 
 	card.RetrofitCardPlugin = react.RegisterPluginRecipe(stationEow.StationGroupEowExtensionPoint, "StationRetrofitsCard",
