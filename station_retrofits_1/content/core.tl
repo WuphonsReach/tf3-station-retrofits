@@ -43,6 +43,10 @@ local emissionStep = 0.05
 -- Each level adds this share of the base upkeep; the upkeep tree cuts the total.
 local upkeepPerLevel : {string : number} = { catchment = 0.15, pollution = 0.05, noise = 0.10 }
 local upkeepStep = 0.05
+-- Level 1 costs this share of the build price (spec, "Price and upkeep"); catchment is the dearest, as it brings in more town.
+local firstLevelShare : {string : number} = { catchment = 0.20, pollution = 0.08, noise = 0.12, upkeep = 0.25 }
+local priceGrowth = 1.15 -- each further level costs this much more than the one before
+local buildPricePerUpkeep = 6 -- 80 of the 81 base station modules cost 6 times their yearly upkeep to build
 core.upkeepShares = upkeepPerLevel
 core.upkeepStep = upkeepStep
 
@@ -115,6 +119,16 @@ function core.upkeepFactor(values : {string : integer}) : number
 	local added = 0.0
 	for tree, share in pairs(upkeepPerLevel) do added = added + share * (values[tree] or 0) end
 	return (1 + added) * (1 - upkeepStep * (values.upkeep or 0))
+end
+
+-- The station's build price, from the upkeep the game charges for it now: 6 times the upkeep without the levels, rounded to
+-- $100 (the game charges whole dollars, so undoing the levels' factor leaves a few dollars of noise).
+function core.buildPrice(chargedUpkeep : number, values : {string : integer}) : number
+	return 100 * round(buildPricePerUpkeep * chargedUpkeep / core.upkeepFactor(values) / 100)
+end
+
+function core.levelPrice(buildPrice : number, tree : string, level : integer) : integer
+	return round(firstLevelShare[tree] * buildPrice * priceGrowth ^ (level - 1))
 end
 
 local copyTable = function(source : {any : any}) : {any : any}

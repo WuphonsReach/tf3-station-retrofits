@@ -4,7 +4,7 @@
 -- - loadScript wraps the station script's updateFn (core.wrapUpdate). The game loads a construction's update script through
 --   this modifier, so the wrapper runs whichever way the construction is reached and sits inside any mod that wraps the
 --   construction (docs/design/findings.md, "Seen in other mods' code").
--- Probe 1 build (docs/design/probe-plan.md): base stations only. Log lines start with "STATION_RETROFITS".
+-- Base stations only for now. Log lines start with "STATION_RETROFITS".
 
 local modVersion = "0.1-dev"
 

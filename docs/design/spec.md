@@ -2,7 +2,7 @@
 
 ## In short
 
-Stations get levels, bought one at a time in the station's own window, the way [Depot Retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits) does it for depots. This is a draft: every number below is a starting point taken from Depot Retrofits, and the trees marked "if the probe allows" depend on the probes in [probe-plan.md](probe-plan.md). Nothing is built yet.
+Stations get levels, bought one at a time in the station's own window, the way [Depot Retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits) does it for depots. This is a draft: every number below is a starting point taken from Depot Retrofits, and the scope depends on the probes in [probe-plan.md](probe-plan.md). Levels are applied and shown (probes 1 and 2); buying them is built and not yet tested in game.
 
 The planned first version has three trees of 15 levels each (catchment radius, pollution, noise), plus an upkeep tree. Waiting capacity is not a tree: players already add it by building more station modules, and mods with larger stops or modules cover the rest. It covers the base modular stations (rail, road and tram terminals, harbours) and later stations from other mods that have the same shape. A tree's highest level is the company's claimed rank. A level is applied by rebuilding the station with new hidden params, as for depots.
 
@@ -50,7 +50,8 @@ Notes:
   - **Collapsed (summary):** one row per tree: the stock icon, 15 level boxes (bought, allowed by the rank, locked) and, at the right edge, what the levels do now ("200 -> 230 m" for the largest catchment circle, "-25%" for pollution and noise, "-25% of total" for upkeep).
   - **Expanded:** one row per tree: what the next level changes, the upkeep after it, and a buy button with the shopping cart and the price. Greyed when the rank is too low or unknown, or the balance is short. The game's own upkeep footer stays where it is in the window.
   - **Tooltip, on the whole row:** the tree's name and "Level 4/7 (max 15)" as in Depot Retrofits (the level over what the rank allows, "(max 15)" only while the rank is lower), then what a level does and what upkeep it adds, one sentence a line.
-- A click sends the buy; the game script rebuilds the station and books the price once the rebuild has landed; "Not rebuilt" with the proposal viewer when the game refuses it.
+- A click sends the buy; the game script checks it again (level not stale, within the rank, enough money), rebuilds the station and books the price once the rebuild has landed, as station construction under the station's carrier (rail RAIL, harbour WATER, road station ROAD, or TRAM with tram tracks). A rebuild that never lands costs nothing.
+- When the game refuses the rebuild (the levels have not changed about a second after the click), the card shows the yellow "Not rebuilt" banner above its rows until a level lands: "Not rebuilt: a building, road or track is in the way. Nothing was charged. Clear it and buy again." Depot Retrofits also shows what is in the way with the game's proposal viewer; the station window gives its cards no place for it (findings), so that is left for later.
 - What a rebuild does to waiting passengers and cargo and to vehicles at the platforms is unknown (probe 1). If it loses the waiting passengers or cargo, say so on the card.
 
 ## Rank gate

@@ -53,6 +53,8 @@ For the kerbside stops (`street/small_stops/small_stops.script.lua`): a `streetT
 
 - **Emissions follow crowding.** `game_mechanics/emission/emissions.script.tl` updates every station's emitter (offset 2 in its update cycle). It reads `api.engine.util.station.calculateStationUsage(entity)` and slides between the two emission states by `totalUsed / (poolCapacity + terminalCapacity)`, clamped to 0..1. So a station with more capacity is less crowded and emits less, as a depot with a larger pool does. The eco factor is 1 for stations: the Industry Greenification tool cannot reach them (from Depot Retrofits).
 - **Station window.** A click on a station opens the construction window, whose tabs are the construction's subconstructions; for a station the content is `gui/entity_window/station_group/station_group.tl`, and the window takes `customTabs` (`gui/entity_window/make_entity_window.tl`, around line 130). Depot Retrofits' window script returns this base window with a Retrofit tab added, but for stations that route hides the station window; a card in the station window's plugin extension point is the alternative (see "Seen in other mods' code", probe 2). Seen in game (test results): the base window has no tab bar; it shows a Waiting Hall row (waiting / pool capacity) on stations with a pool, then one row per terminal (cargo type, length in m, waiting / capacity on passenger terminals only, the lines that stop), a Loaded/Unloaded graph, the upkeep per year and a Configure button. Selecting a station draws its catchment circle and highlights the buildings inside it.
+- **No action area for plugin cards.** The station window hands its plugin cards the entity, its ownership, the game context, the callout side and the collapse functions (`gui/entity_window/eow_extension_util.d.tl`, `IEowWidgetsExtensionParams`; filled in `station_group.tl` around line 849), but no `setActionFn`. So a card cannot place the proposal viewer in the window's action area as Depot Retrofits' tab does, and Depot Retrofits found that the viewer placed among a window's own widgets stops the game (`Assertion !IsTransformWithContext(node.recipeId)`). For now the card only says that a rebuild was refused.
+- **Tram tracks.** A road station with tram tracks has the construction param `tramTrack` above 1, which adds the tram transport modes (`street/modular_street_station/modules.script.lua`); the buy books its price under TRAM then, else ROAD.
 
 ## Base module values
 
@@ -89,7 +91,7 @@ Each of these held for depots and maintenance buildings in game; each needs a ch
 - Rebuilds the game starts (catenary, module edits through the depot's upgrade script) went through the wrapper and kept the levels.
 - `loadModule` modifiers are called by TF3 (Depot Retrofits wraps module update scripts with one). Probably not needed for stations, since the hook runs after the modules.
 - Upkeep: the construction's `MAINTENANCE_COST` component holds the script's `maintenanceCost`; the charged figure is that × the base config's `infrastructureMaintenanceScale` (`calcMaintenanceForSubconstruction`).
-- Charging: a `JournalEntry` of type `CONSTRUCTION`, booked with `makeJournalBookAssetCmd` from the game script. Depot Retrofits uses `JournalEntry.Construction.DEPOT`; which value suits a station is not checked.
+- Charging: a `JournalEntry` of type `CONSTRUCTION`, booked with `makeJournalBookAssetCmd` from the game script. Depot Retrofits uses `JournalEntry.Construction.DEPOT`; the list (`scripts/journal.d.tl`) also has `STATION`, which the station buy uses (not yet seen in the Finances tab).
 - The game script's state is written from the simulation thread (`handleEvent`) and from about ten worker threads (`update`), each with its own copy; module variables do not persist. A pending buy counts as landed once the stored level is at least the bought one.
 - Rank: base `company_progression_util.tl` gives the claimed rank.
 
@@ -115,7 +117,7 @@ From a read-only survey of the station, catchment, capacity and emission script 
 7. Whether module edits, catenary swaps and the rail and street upgrade scripts keep the hidden params. (Probe 3.)
 8. Whether a kerbside stop (an edge object) can be replaced with new params. (Probe 4.)
 9. How much comfort and load speed change in play. Leave both out until measured.
-10. Which `JournalEntry.Construction` value fits a station charge.
+10. Whether a level's price, booked as `CONSTRUCTION` / `STATION` under the station's carrier, shows in the Finances tab where the player expects it.
 11. How stations from popular mods are shaped (whether they return a `station` table, use `terminateConstructionHook`, set `constructionType`).
 12. Whether the levels stack with other mods that change the same values. Read from their code (next section): they do if we wrap through `loadScript` and multiply the values we find; untested in game.
 
