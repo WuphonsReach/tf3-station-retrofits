@@ -119,6 +119,7 @@ From a read-only survey of the station, catchment, capacity and emission script 
 9. How much comfort and load speed change in play. Leave both out until measured.
 11. How stations from popular mods are shaped (whether they return a `station` table, use `terminateConstructionHook`, set `constructionType`).
 12. Whether the levels stack with other mods that change the same values. Read from their code (next section): they do if we wrap through `loadScript` and multiply the values we find; untested in game.
+13. Where a harbour's pollution and noise are emitted. Both harbours in the pollution test, and Nürnberg Hafen before, read 0 / 0 on the station entity's emitter before their first level, though the scaled `metadata.emissions` hold 34 / 210 and 68 / 420. If the emitter is elsewhere or the harbour was idle, pollution and noise levels on harbours may show nothing.
 
 ## Test results
 
@@ -234,4 +235,21 @@ The same save, logLevel `"full"`, with the shared button width and the 5-tick wa
 - **The wait runs from the click, and the game script can be slow to take a buy up.** Harbour pollution 7: clicked 23:23:01, taken up (`buy queued`, `buy sent`) at 23:23:04, landed 23:23:06. The 5-tick wait ran out the same second, so the banner showed for a moment (`card notRebuilt waited=5`), as the user saw once. The card now waits 10 ticks.
 - **A level of another tree let a second click through.** Two noise clicks at 23:23:06, one on each side of the card seeing pollution 7 land: the card took any change of the levels as the click having landed, so both went out with noise 0. The game script built the first and refused the second (`buy refused reason=stale stored=1`); one charge. The card now waits for the clicked tree to go up.
 - **The buttons share a width** (25 screenshots): the stylesheet rule `Button!station-retrofits-buy { minSize = { 120, -1 } }` loaded, every buy button is the same width ("$556,800" as wide as "$222,720"), the price sits in the middle of it, and the upkeep figures end in one column before the buttons.
+
+### 2026-11-01: pollution levels across a town
+
+Save `WR26A Giga-Tv3 1915 1101-1134 more mods` (a fresh copy, rank 9, Jan 1915, balance about $484 million), logLevel `"full"`. Log: `local/logs/stdout-2026-11-01-pollution1.txt`; 24 screenshots (18:34 to 18:50 local), with the pollution layer and the Peterlee town window.
+
+- **207 buys on 16 stations** in and around Peterlee (2 rail, 12 road of which 5 with tram tracks, 2 harbours), all charged once; no refusal, no "Not rebuilt". Every station to pollution 9 (−45%), 7 of them to upkeep 9 as well. $29.8 million in all. Carriers RAIL, ROAD, TRAM and WATER as the stations' kinds.
+- **The town window's pollution sources** (date Jan 12, 1915 in every shot):
+
+| Time (local) | Stations levelled | Stations | Industries | Company vehicles | Tracks | Rating |
+|---|---|---|---|---|---|---|
+| 18:40:18 | 5 of 16 | 23% | 20% | 18% | 15% | Poor |
+| 18:43:25 | 13 | 17% | 21% | 21% | 16% | Poor |
+| 18:47:10 to 18:50:44 | 16 | 15% | 21 to 22% | 20 to 22% | 17% | Poor |
+
+- **What that means.** With every station's own pollution at 55%, a 15% share means the stations started near 24% of the town's pollution (0.55 × 24 / (100 − 0.45 × 24) = 14.8). The other sources' shares grew by the expected 1/0.89 (tracks 15 to 17%). So the town's pollution fell by about 11%, and its rating stayed Poor: industries, company vehicles and tracks make up the rest. At level 15 (−75%) the stations would fall to about 7% and the town's pollution by about 18%.
+- **Pollution of the stations before their first level** (`pollutionPower` on the station entity): road stations 30 to 130, Upper Peterlee 45, Peterlee rail station 258, the two harbours 0 (unknown 13).
+- **Price against effect.** Pollution 1 to 9 costs 1.34 × the build price (8.06 × the base upkeep) and adds 45% of the base upkeep a year. Per unit of station pollution removed: Upper Peterlee $63,861 once and $3,567 a year; the Peterlee rail station $36,868 and $2,059; a large road station $20,832 and $1,163; a small one $15,667 and $875. Level 9 alone costs $25,700 to $105,000 a unit. For scale only, the game's Cleaning Plant (`game_mechanics/emission/pollution_cleanup_facility.con.lua` and `.script.lua`; rank 10, $100 million, $10 million a year, needs machines) sets its own emitter to −10,000 pollution within 700 m while producing, a negative source in the emission grid that every emitter feeds: $10,000 a unit once and $1,000 a year. Whether a town's pollution rating reads that grid, or only sums the polluting sources its window lists (the plant is not among them), is not known: the rating is worked out in the engine. The eco level (Industry Greenification) does reach only industries (`ecoFactor` in `emissions.script.tl`).
 

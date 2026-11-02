@@ -36,10 +36,19 @@ Notes:
 - **Left out: waiting capacity.** Players add waiting places by building more station modules, and mods with larger stops or modules cover the rest; a bought level would only duplicate that.
 - **Left out for now: comfort and load speed.** Both are set in the same hook, but their effect is decided in the engine and unmeasured. Add them only after a test shows what a level does in play.
 
-## Price and upkeep (draft, from Depot Retrofits)
+## Price and upkeep
 
 - **Build price.** 6 × the upkeep the game charges for the station now, divided by what its current levels do to the upkeep, rounded to $100. In 80 of 81 base station modules the price is exactly 6 × the upkeep, so this matches the modules' summed price.
-- **Level price.** Level *n* costs the tree's first-level share × the build price × 1.15^(*n*−1). Depot shares: 0.15 radius and vehicles, 0.12 noise, 0.08 pollution, 0.25 upkeep. Here: 0.20 catchment (decided: above the other trees), and as starting points 0.12 noise, 0.08 pollution, 0.25 upkeep.
+- **Level price.** Level *n* costs the tree's first-level share × the build price × the tree's step^(*n*−1) (decided, after the pollution test):
+
+| Tree | First-level share | Step | Levels 1 to 9 (× build price) | All 15 (× build price) |
+|---|---|---|---|---|
+| Catchment | 0.20 | 1.15 | 3.36 | 9.52 |
+| Pollution | 0.04 | 1.10 | 0.54 | 1.27 |
+| Noise | 0.08 | 1.12 | 1.18 | 2.98 |
+| Upkeep | 0.16 | 1.15 | 2.69 | 7.61 |
+
+  Catchment is the dearest, as it brings in more town (passengers and cargo). Pollution and noise are cheap and rise slowly: stations are only part of a town's pollution, so pollution 9 on all 16 stations of a town cut its pollution by about 11% (findings, test results). The upkeep tree is priced to pay for itself: on a station with the other three trees full (5.5 × the base upkeep), the full tree costs 45.7 × the base upkeep and saves 4.1 × a year, about 11 years (level 1 in 3.5 years, level 15 in 25). On a station with no other levels it saves only 0.75 × a year. Depot Retrofits keeps its own shares (0.15, 0.08, 0.12, 0.25) and one step of 1.15.
 - **Upkeep.** Each improving level adds a share of the base upkeep: 15% catchment, 10% noise, 5% pollution. The upkeep tree multiplies the total by (1 − 0.05 × levels).
 - **How upkeep is applied.** After the hook, the script's `maintenanceCost` already holds the modules' upkeep, and the game charges what the script leaves there; the wrapper multiplies it by the upkeep factor (probe 1).
 - **Modules added later.** As in Depot Retrofits, levels are not repriced when the station grows; the upkeep the levels add follows the modules. Big stations pay big prices, since the build price grows with the modules.
@@ -64,6 +73,7 @@ As in Depot Retrofits: a tree's maximum level is the claimed company rank; no le
 - Name "Station Retrofits", folder `station_retrofits_1`, log prefix `STATION_RETROFITS` (mod.io still to be checked for a clash).
 - Catchment is in: +3% per level, at least +5 m, first-level share 0.20.
 - Waiting capacity is out: more station modules, or mods with larger stops or modules, already add it.
+- Prices (after the pollution test): pollution 0.04 with a step of 1.10, noise 0.08 with 1.12, upkeep 0.16 so that a fully levelled station's upkeep tree pays back in about 11 years; catchment unchanged. Pollution and noise levels still add 5% and 10% of the base upkeep.
 
 ## Open decisions (for the user)
 
