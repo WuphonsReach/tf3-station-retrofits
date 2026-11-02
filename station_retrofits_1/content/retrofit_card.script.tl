@@ -94,7 +94,7 @@ local buyEvent = "stationRetrofitsBuy"
 -- (gui/line_vehicle_mgmt/vehicle_store_window.tl).
 local upkeepIcon = "::/gui/entity_window/icons/symbol_dollar_gear.tga"
 local buyIcon = "::/gui/line_vehicle_mgmt/icons/symbol_shopping_cart.tga"
-local buyTooltip = "Buy the next level. The station is rebuilt with it."
+local buyTooltip = "Buy the next level."
 local treeIcons : {string : string} = {
 	catchment = "::/gui/entity_window/icons/prio_standard.tga",
 	pollution = "::/gui/entity_window/icons/symbol_pollution.tga",
@@ -111,11 +111,10 @@ local kindNames : {string : string} = {
 -- What each tree does, for the row's tooltip. A plain tooltip does not wrap (Depot Retrofits' findings), so the lines are
 -- broken by hand, one sentence a line.
 local treeTooltips : {string : string} = {
-	catchment = "Each level widens every catchment circle by 3%, at least 5 m.\n"
-		.. "Shown: the largest circle, without and with the levels.",
-	pollution = "Each level cuts the station's own pollution by 5%.\n"
+	catchment = "Each level widens every catchment circle by 3%, at least 5 m.",
+	pollution = "Each level cuts the station's pollution by 5%.\n"
 		.. "Vehicle pollution is not affected.",
-	noise = "Each level cuts the station's own noise by 5%.\n"
+	noise = "Each level cuts the station's noise by 5%.\n"
 		.. "Vehicle noise is not affected.",
 	upkeep = "Each level cuts the station's upkeep by 5%,\n"
 		.. "including what the other levels add.",
@@ -463,7 +462,7 @@ end
 -- The tree's name and level, what it does and what else it costs, one sentence a line.
 local rowTooltip = function(s : CardState, tree : string, level : integer) : string
 	local share = core.upkeepShares[tree]
-	local costLine = share ~= nil and ("\nEach level also adds " .. tostring(round(share * 100)) .. "% of the station's own upkeep.") or ""
+	local costLine = share ~= nil and ("\nEach level adds " .. tostring(round(share * 100)) .. "% to the station's upkeep.") or ""
 	return core.names[tree] .. ": " .. levelLabel(s, level) .. "\n" .. treeTooltips[tree] .. costLine
 end
 
@@ -535,7 +534,7 @@ local buyButton = function(s : CardState, entry : Entry, tree : string) : TreeNo
 	elseif tree == "catchment" and entry.radius == nil then
 		label, tooltip = money(price), "The station has no catchment circle"
 	elseif s.rank == nil then
-		label, tooltip = "Rank ?", "The company rank could not be read, so no level can be bought (see the game log)"
+		label, tooltip = "Rank ?", "The company rank could not be read (see the game log)"
 	elseif nextLevel > s.rank then
 		label, tooltip = "Rank " .. tostring(nextLevel), "Needs company rank " .. tostring(nextLevel)
 	elseif entry.affordable ~= nil and not entry.affordable[tree] then
@@ -616,7 +615,7 @@ local nextRows = function(s : CardState) : {TreeNodeId}
 				right[#right + 1] = buyButton(s, entry, tree)
 				rows[#rows + 1] = row({ icon(treeIcons[tree]), text(" " .. effectNext(entry, tree, nextLevel)) },
 					builtin.BoxLayout{ orientation = builtin.type.Orientation.Horizontal, children = right },
-					tooltip .. "\nThe next level, level " .. tostring(nextLevel) .. ": what it changes, the upkeep after it and its price.")
+					tooltip)
 			end
 		end
 	end
