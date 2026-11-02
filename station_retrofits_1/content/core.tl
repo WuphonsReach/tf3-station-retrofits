@@ -43,9 +43,13 @@ local emissionStep = 0.05
 -- Each level adds this share of the base upkeep; the upkeep tree cuts the total.
 local upkeepPerLevel : {string : number} = { catchment = 0.15, pollution = 0.05, noise = 0.10 }
 local upkeepStep = 0.05
--- Level 1 costs this share of the build price (spec, "Price and upkeep"); catchment is the dearest, as it brings in more town.
-local firstLevelShare : {string : number} = { catchment = 0.20, pollution = 0.08, noise = 0.12, upkeep = 0.25 }
-local priceGrowth = 1.15 -- each further level costs this much more than the one before
+-- Level 1 costs this share of the build price, and each further level this much more than the one before (spec, "Price
+-- and upkeep"). Catchment is the dearest, as it brings in more town. Pollution and noise are cheap and rise slowly: stations
+-- are only part of a town's pollution (pollution 9 on all of a town's stations cut its pollution by about 11%). The upkeep
+-- tree's share is set so that, on a station with the other three trees full (5.5 × the base upkeep), the full tree pays for
+-- itself in about 11 years.
+local firstLevelShare : {string : number} = { catchment = 0.20, pollution = 0.04, noise = 0.08, upkeep = 0.16 }
+local priceGrowth : {string : number} = { catchment = 1.15, pollution = 1.10, noise = 1.12, upkeep = 1.15 }
 local buildPricePerUpkeep = 6 -- 80 of the 81 base station modules cost 6 times their yearly upkeep to build
 core.upkeepShares = upkeepPerLevel
 core.upkeepStep = upkeepStep
@@ -128,7 +132,7 @@ function core.buildPrice(chargedUpkeep : number, values : {string : integer}) : 
 end
 
 function core.levelPrice(buildPrice : number, tree : string, level : integer) : integer
-	return round(firstLevelShare[tree] * buildPrice * priceGrowth ^ (level - 1))
+	return round(firstLevelShare[tree] * buildPrice * priceGrowth[tree] ^ (level - 1))
 end
 
 local copyTable = function(source : {any : any}) : {any : any}
