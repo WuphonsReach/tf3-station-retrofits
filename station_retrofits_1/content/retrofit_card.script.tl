@@ -165,8 +165,8 @@ end
 -- after the click let a second click through, sent with the old level (the game script refused it as stale). A click while it shows keeps the warning up, so a retry the game refuses again does not make it
 -- blink; a buy sent again replaces the refused one in the game script. A buy the game script itself refused never reaches the
 -- game, so while waiting the card also reads the game script's state for its click: refused there for want of money (the
--- balance can fall between the card's last read and the game script's check), the card says so instead, until the next click
--- or a new level. Kept per construction for the session, so the warning
+-- balance can fall between the card's last read and the game script's check), the card says so instead, until the next click,
+-- a new level or about 30 seconds later: the balance is usually back by then (docs/design/findings.md). Kept per construction for the session, so the warning
 -- is still there when the window is opened again. Depot Retrofits also shows what is in the way, with the game's proposal
 -- viewer in the window's action area; the station window gives its cards no action area (setActionFn), so the card only
 -- says it.
@@ -178,7 +178,16 @@ local record Try
 	click : integer -- sent with the buy, which the game script keeps with a refusal
 end
 local tries : {Engine.Entity : Try} = {}
-local short : {Engine.Entity : string} = {} -- the levels when the game script refused the buy for want of money
+local record Short
+	levels : string -- core.describe of the levels when the game script refused the buy for want of money
+	at : number -- clockNow() then
+	step : integer -- stepCount then
+end
+local short : {Engine.Entity : Short} = {}
+-- How long the "Not bought" note stays: the balance came back within 5 to 15 seconds after each money refusal seen
+-- (docs/design/findings.md). Steps as for refusedAfterSteps, only where os.time is not available.
+local shortForSeconds = 30
+local shortForSteps = 1800
 local clicks = 0
 local refused : {Engine.Entity : string} = {} -- the levels when the buy was found refused; cleared by a new level
 -- Nine to ten seconds: ten ticks of os.time, as the game API has no finer clock. The wait runs from the click, so it covers
@@ -243,7 +252,7 @@ local readRefused = function(construction : Engine.Entity, levels : {string : in
 		elseif reason ~= nil then
 			tries[construction] = nil
 			if reason == "noMoney" then
-				short[construction] = current
+				short[construction] = { levels = current, at = now, step = stepCount }
 				refused[construction] = nil
 			end
 			say("card notBought construction=" .. tostring(construction) .. " tree=" .. try.tree .. " levels=" .. current
@@ -256,7 +265,14 @@ local readRefused = function(construction : Engine.Entity, levels : {string : in
 		end
 	end
 	if refused[construction] ~= nil and refused[construction] ~= current then refused[construction] = nil end
-	if short[construction] ~= nil and short[construction] ~= current then short[construction] = nil end
+	local note = short[construction]
+	if note ~= nil then
+		local now, isClock = clockNow()
+		if note.levels ~= current or (isClock and now - note.at >= shortForSeconds)
+			or (not isClock and stepCount - note.step >= shortForSteps) then
+			short[construction] = nil
+		end
+	end
 	return refused[construction] ~= nil
 end
 

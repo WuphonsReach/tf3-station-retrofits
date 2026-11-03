@@ -274,3 +274,12 @@ A new game (`WR26A Giga-Tv3 1900`, from Jan 1900, rank 1 to 2), played with the 
 
 - No `Error while loading game script`, no error from the mod; the four stack traces in the log come from the base game's GUI (`gui/main/selector_react_util.tl`, `gui/main/engine_react_util.tl`).
 - 56 buys on 22 stations, all charged once, none refused, no "Not rebuilt". The game grew from 20 to 118 vehicles meanwhile.
+
+### 2026-11-02: "Not bought" for a buy refused for money
+
+Save `WR26A Giga-Tv3 1907 1102-2020` (Feb 1907, rank 7 then 8), with Depot Retrofits' matching fix, logLevel `"full"`. Log: `local/logs/stdout-20261102-notbought1.txt` (01:22 to 01:29 UTC); 9 screenshots (20:22 to 20:29 local).
+
+- The money refusals before the fix: the 2026-11-02 evening log (`local/logs/stdout-20261102-play2.txt`, the same file as Depot Retrofits' `2026-11-02-1949-stdout.txt`) had two on tram station 308068, both shown as "Not rebuilt" 10 seconds later. The balance there falls by hundreds of thousands at once and climbs back within 5 to 15 seconds, so the refusals were right; only the banner was wrong.
+- Oakheart Port (harbour 187686, levels 7/7/0/7): the card read the pollution buy as affordable at 01:25:31 (`affordable=nyyn`); the click at 01:25:32 was refused (`noMoney balance=-756596 price=49108`), and the card logged `card notBought reason=noMoney waited=0` in the same second, without waiting for the 10 seconds. The screenshots show the yellow note with the dollar icon above the level rows, "Not bought: not enough money at the time of the buy. Nothing was charged.", with the buy buttons greyed out (balance −$746,372). It stayed until the next click: at 01:28:04 the balance was back ($2,540,322, all four buttons enabled) and the note still up; the upkeep buy at 01:28:10 cleared it, landed and was charged. Two more buys followed, charged at the shown prices.
+- No `card scriptStateError`: the card reads the game script's state. No `Error while loading game script`.
+- Depot Retrofits' fix showed the same in the same session: two `window notBought reason=noMoney` (road depot 254563, Oakheart Ship Depot 241189), the note in the depot's tab.
