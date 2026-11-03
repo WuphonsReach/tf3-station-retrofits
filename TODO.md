@@ -38,9 +38,22 @@
 
 - [ ] Fix the spec: trees, shares, scope (airports, underground station, kerbside stops), the upkeep tree.
 - [x] Buying, from Depot Retrofits' 1.2 code: prices in `core.tl`, the game script `retrofits.script.tl` (buy queue, checks, rebuild, charge on landing), buy buttons and the "Not rebuilt" banner in the card. The probe 1 game script is retired (git history).
-- [ ] Test buying in game. Done on a rail station (11 buys, all four trees): prices, charges, upkeep and catchment as the card showed (findings, test results). Then 70 buys on six stations (rail, road with tram, cargo rail, cargo road, harbour): charges under Investments, Infrastructure, to the dollar; the three-part rows fit; "Rank 14" greyed at rank 13. Left: harbour buys with the longer waits (no flash); greyed for money; a refused rebuild shows the banner and charges nothing; buying while the game runs.
+- [ ] Test buying in game. Done on a rail station (11 buys, all four trees): prices, charges, upkeep and catchment as the card showed (findings, test results). Then 70 buys on six stations (rail, road with tram, cargo rail, cargo road, harbour): charges under Investments, Infrastructure, to the dollar; the three-part rows fit; "Rank 14" greyed at rank 13. Left: harbour buys with the longer waits (no flash), at 4x speed too (the game script now waits 30 real seconds; a game day passes in about one); greyed for money; a refused rebuild shows the banner and charges nothing; buying while the game runs.
 - [x] Prices lowered after the pollution test (spec, "Price and upkeep"). Not yet seen in game.
 - [ ] Find where a harbour's pollution and noise are emitted (findings, unknown 13): its station emitter read 0.
 - [x] "Not bought" note for buys refused for money (spec), from Depot Retrofits' fix for the same case. Seen in game on a harbour (findings, test results); before it, two such buys on a tram station showed "Not rebuilt".
 - [ ] "Not rebuilt": show what is in the way (the proposal viewer needs an action area the station window does not give its cards; findings).
 - [ ] User guide, listing text, cover and gallery, release process (`docs/publishing.md` from Depot Retrofits).
+
+## From the code review (2026-11-03)
+
+Not yet checked in game. The first two share a cause (the card guesses the outcome of a buy) and are best fixed together.
+
+- [ ] The card's "Not rebuilt… Nothing was charged" comes from its own 10-second wait, while the game script waits 30 seconds and charges a rebuild that lands in that time (`retrofit_card.script.tl`, `readRefused`). Have `processPending` record landed or not landed for each click in state, as `recordRefusal` does, and have the card read that.
+- [ ] `replacePending` drops the station's pending buy uncharged even when the new buy is for another tree (`retrofits.script.tl`). If the earlier rebuild then lands and the game refuses the new one, the station keeps a level it never paid for. Replace only a pending buy for the same tree and level.
+- [ ] `core.wrapUpdate`: a modular result (`params.modules` and `slots`) without a `terminateConstructionHook` is scaled at once, before the game adds the modules' upkeep and catchment. Log and skip it instead.
+- [ ] `core.wrapUpdate`: after its first call the wrapped hook returns the cached results to every later call, including the copies relinked in harbour tables, without running the original. Check in a probe whether the game calls those copies with other arguments (`hookAgain` at logLevel "full"; none seen in probe 1).
+- [ ] `update` and `handleEvent` each read the whole state and write it back; if they ever interleave, a queued buy or a refusal is lost. Probably they run one after the other (Depot Retrofits lost none in 144 quick buys); confirm or merge the writes.
+- [ ] The card's `stepCount` goes up once per construction per step across all open windows, so the step fallbacks (`refusedAfterSteps`, `shortForSteps`, used only without `os.time`) run several times too fast. Count per construction or once per card step.
+- [ ] `say`, the `logLevel` load, `clockNow`, `constructionParams`, `round` and `buyEvent` are copied in up to three scripts; move them to `core.tl`. Check whether the card's `constructionParams` (returns the native table) should copy as the game script's does.
+- [ ] `tools/check_repo.py` reads `settings.tl` with a loose pattern: a trailing comment or single quotes fail CI on a correct value. Match only the quoted string.
