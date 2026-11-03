@@ -16,18 +16,21 @@ local stateVersion = 1
 -- Copied in retrofit_card.script.tl; keep the copies equal.
 local buyEvent = "stationRetrofitsBuy"
 
--- Clock units: a game day at calendar speed 1x is 4,000.
+-- Clock units: a game day at calendar speed 1x is 4,000. The clock runs at about 1,000 a real second at 1x speed and 4,000
+-- at 4x (Depot Retrofits' findings: 190,000 units took about 3 minutes at 1x, 48 seconds at 4x).
 local dayClock = 4000
 -- A buy is charged when its rebuild lands: the stored level in its tree is at least the one bought, so a later buy landing
 -- first also counts. A new buy for the same station before then replaces it, uncharged: the card sends one buy at a time per
 -- station and says after a few seconds that the game refused it, so a buy sent again after clearing the way must go
 -- through. Both rebuild to the same level from the same stored levels, so at most one is charged. A rebuild that has not
--- landed after a game day, or after 30 real seconds, is given up, uncharged: the game refused it. The real seconds count
--- while the game is paused, when game time stands still. Rail and road stations land within a second, harbours in 2 to 3
+-- landed after 30 real seconds is given up, uncharged: the game refused it. The real seconds count while the game is
+-- paused, when game time stands still. Rail and road stations land within a second, harbours in 2 to 3 real seconds
 -- (docs/design/findings.md); Depot Retrofits' 3 seconds would have let a harbour keep a level uncharged, and waiting longer
--- is safe, as only our own rebuild raises a stored level. The pending buy keeps only its tree and level, as in Depot
--- Retrofits: pending buys that kept all the levels were found holding the levels from before the buy in a run of quick buys.
-local buyPendingClock = dayClock
+-- is safe, as only our own rebuild raises a stored level. Game time is no bound for this: at 4x a game day passes in about
+-- a second, before a harbour lands. It is used only where os.time is not available, as 30 game days (30 seconds at 4x).
+-- The pending buy keeps only its tree and level, as in Depot Retrofits: pending buys that kept all the levels were found
+-- holding the levels from before the buy in a run of quick buys.
+local buyPendingClock = 30 * dayClock
 local buyPendingSeconds = 30
 
 local record Buy
@@ -52,7 +55,7 @@ local record Pending
 	construction : Engine.Entity
 	tree : string
 	level : integer
-	untilT : number
+	untilT : number -- game time after which it is given up, where sentAt is nil
 	sentAt : number -- os.time() when the rebuild was sent; nil where os.time is not available
 	price : integer -- charged when the rebuild lands
 	carrier : string -- the finance row's carrier, "ROAD", "TRAM", "RAIL" or "WATER"
@@ -246,7 +249,8 @@ local landed = function(p : Pending, stored : {string : integer}) : boolean
 end
 
 local expired = function(p : Pending, t : number, clock : number) : boolean
-	return t >= p.untilT or (clock ~= nil and p.sentAt ~= nil and clock >= p.sentAt + buyPendingSeconds)
+	if clock ~= nil and p.sentAt ~= nil then return clock >= p.sentAt + buyPendingSeconds end
+	return t >= p.untilT
 end
 
 local stillPending = function(p : Pending, t : number) : boolean
