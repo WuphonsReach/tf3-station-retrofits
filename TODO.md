@@ -41,5 +41,6 @@
 - [ ] Test buying in game. Done on a rail station (11 buys, all four trees): prices, charges, upkeep and catchment as the card showed (findings, test results). Then 70 buys on six stations (rail, road with tram, cargo rail, cargo road, harbour): charges under Investments, Infrastructure, to the dollar; the three-part rows fit; "Rank 14" greyed at rank 13. Left: harbour buys with the longer waits (no flash); greyed for money; a refused rebuild shows the banner and charges nothing; buying while the game runs.
 - [x] Prices lowered after the pollution test (spec, "Price and upkeep"). Not yet seen in game.
 - [ ] Find where a harbour's pollution and noise are emitted (findings, unknown 13): its station emitter read 0.
+- [ ] "Not bought" note for buys refused for money (spec), from Depot Retrofits' fix for the same case: built, not yet seen in game. The 2026-11-02 session had two such buys on a tram station, both shown as "Not rebuilt".
 - [ ] "Not rebuilt": show what is in the way (the proposal viewer needs an action area the station window does not give its cards; findings).
 - [ ] User guide, listing text, cover and gallery, release process (`docs/publishing.md` from Depot Retrofits).
