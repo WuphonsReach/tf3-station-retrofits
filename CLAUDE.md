@@ -60,6 +60,7 @@ Base game sources are `.tl` and `.lua` files inside zips under the game's `base/
 - After a change that adds a load or an API call, check the first log lines after the save loads for `Error while loading game script` before the user plays at speed: a broken load in a sibling mod raised an error every update and froze the game.
 - Test on a copy of a manual save. A probe acts by itself when loaded, with a small cap on what it does; no safeguards or confirmations are needed on test saves.
 - When the user shares a series of screenshots, read all of them and tabulate them against the log. A missing screenshot is not proof that something never showed.
+- Read screenshots through the screenshot index in the sibling repo `../tf3-save-format` first (`tools/screenshot_index.py`, workflow in its `.claude/skills/screenshot-index/SKILL.md`, the command for this machine in `local/machine.md`): OCR them by day, search the text, then open only crops. Picked crops of the mod at work, full resolution, go in the gitignored `local/screenshots/` with a `README.md` index.
 
 ## Conventions
 
