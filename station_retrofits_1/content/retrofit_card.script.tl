@@ -166,7 +166,8 @@ end
 -- blink; a buy sent again replaces the refused one in the game script. A buy the game script itself refused never reaches the
 -- game, so while waiting the card also reads the game script's state for its click: refused there for want of money (the
 -- balance can fall between the card's last read and the game script's check), the card says so instead, until the next click,
--- a new level or about 30 seconds later: the balance is usually back by then (docs/design/findings.md). Kept per construction for the session, so the warning
+-- a new level, or once it has shown for about 10 seconds and the money covers the clicked level again (see readShort). Kept
+-- per construction for the session, so the warning
 -- is still there when the window is opened again. Depot Retrofits also shows what is in the way, with the game's proposal
 -- viewer in the window's action area; the station window gives its cards no action area (setActionFn), so the card only
 -- says it.
@@ -180,14 +181,16 @@ end
 local tries : {Engine.Entity : Try} = {}
 local record Short
 	levels : string -- core.describe of the levels when the game script refused the buy for want of money
+	tree : string -- the tree of that buy
 	at : number -- clockNow() then
 	step : integer -- stepCount then
 end
 local short : {Engine.Entity : Short} = {}
--- How long the "Not bought" note stays: the balance came back within 5 to 15 seconds after each money refusal seen
--- (docs/design/findings.md). Steps as for refusedAfterSteps, only where os.time is not available.
-local shortForSeconds = 30
-local shortForSteps = 1800
+-- How long the "Not bought" note shows at least, so it can be read: nine to ten seconds, as os.time ticks whole seconds
+-- (30 seconds was found too long in game, 5 too short to read). Steps as for refusedAfterSteps, only where os.time is not
+-- available.
+local shortForSeconds = 10
+local shortForSteps = 600
 local clicks = 0
 local refused : {Engine.Entity : string} = {} -- the levels when the buy was found refused; cleared by a new level
 -- Nine to ten seconds: ten ticks of os.time, as the game API has no finer clock. The wait runs from the click, so it covers
@@ -252,7 +255,7 @@ local readRefused = function(construction : Engine.Entity, levels : {string : in
 		elseif reason ~= nil then
 			tries[construction] = nil
 			if reason == "noMoney" then
-				short[construction] = { levels = current, at = now, step = stepCount }
+				short[construction] = { levels = current, tree = try.tree, at = now, step = stepCount }
 				refused[construction] = nil
 			end
 			say("card notBought construction=" .. tostring(construction) .. " tree=" .. try.tree .. " levels=" .. current
@@ -265,15 +268,23 @@ local readRefused = function(construction : Engine.Entity, levels : {string : in
 		end
 	end
 	if refused[construction] ~= nil and refused[construction] ~= current then refused[construction] = nil end
-	local note = short[construction]
-	if note ~= nil then
-		local now, isClock = clockNow()
-		if note.levels ~= current or (isClock and now - note.at >= shortForSeconds)
-			or (not isClock and stepCount - note.step >= shortForSteps) then
-			short[construction] = nil
-		end
-	end
+	if short[construction] ~= nil and short[construction].levels ~= current then short[construction] = nil end
 	return refused[construction] ~= nil
+end
+
+-- Whether the "Not bought" note still shows: it goes once it has shown for shortForSeconds and the balance covers the
+-- clicked tree's next level again, checked on each of the card's steps, so the enabled buy button replaces it. Still short
+-- of money, it stays. Called after readAffordable; with the balance unreadable it goes after shortForSeconds.
+local readShort = function(entry : Entry) : boolean
+	local note = short[entry.construction]
+	if note == nil then return false end
+	local now, isClock = clockNow()
+	local shown = (isClock and now - note.at >= shortForSeconds) or (not isClock and stepCount - note.step >= shortForSteps)
+	if shown and (entry.affordable == nil or entry.affordable[note.tree] ~= false) then
+		short[entry.construction] = nil
+		return false
+	end
+	return true
 end
 
 local constructionParams = function(construction : Engine.Component.Construction) : {string:any}
@@ -358,8 +369,9 @@ local readCard = function(group : Engine.Entity) : CardState
 		readValues(entry)
 		local okRefused, wasRefused = pcall(readRefused, entry.construction, entry.levels)
 		entry.refused = okRefused and wasRefused or nil
-		entry.short = short[entry.construction] ~= nil or nil
 		local afford = readAffordable(entry, okBalance and tonumber(balance) or nil)
+		local okShort, isShort = pcall(readShort, entry)
+		entry.short = okShort and isShort or nil
 		parts[#parts + 1] = tostring(entry.construction) .. ":" .. entry.kind .. ":" .. core.describe(entry.levels)
 			.. ":stations=" .. tostring(entry.stations) .. ",circles=" .. tostring(entry.circles)
 			.. ",terminals=" .. tostring(entry.terminals) .. ",radius=" .. string.format("%.1f", entry.radius or -1)
