@@ -5,7 +5,8 @@
 -- station since is in its way) never lands. Once the rebuild has landed (the stored level is at least the one bought) it
 -- books the price as station construction under the station's carrier; a rebuild that never lands costs nothing. It logs
 -- each buy and its outcome; at logLevel "full" (settings.tl) also the station before the buy and when it lands. Log lines
--- start with "STATION_RETROFITS".
+-- start with "STATION_RETROFITS". A buy it refuses is kept in its state for the card to read, so the card can tell a buy
+-- refused here (short of money) from a rebuild the game refused.
 --
 -- Copied from Depot Retrofits' retrofits.script.tl (MIT, same author). The probe that levelled stations by itself (probe 1)
 -- is in git history; its results are in docs/design/findings.md.
@@ -33,7 +34,19 @@ local record Buy
 	construction : Engine.Entity
 	tree : string
 	from : integer
+	click : integer -- the card's number for the click that sent it; nil from a card without one
 end
+
+-- A buy refused here, kept for the card (retrofit_card.script.tl), which reads it from this script's state: the card only
+-- sees that the level did not go up, and the balance can fall between its last read and the check here (Depot Retrofits'
+-- 2026-11-02 session: hundreds of thousands at once, back within seconds).
+local record Refusal
+	construction : Engine.Entity
+	click : integer
+	reason : string -- the reason's first word: "noMoney", "rank", "stale" and so on
+end
+-- One per station, the newest last; the card looks only for the click it is waiting on.
+local maxRefusals = 16
 
 local record Pending
 	construction : Engine.Entity
@@ -50,6 +63,7 @@ local record RetrofitState
 	version : integer
 	buys : {Buy}
 	pending : {Pending}
+	refusals : {Refusal}
 end
 
 local say = function(text : string)
@@ -253,6 +267,16 @@ local replacePending = function(retrofit : RetrofitState, construction : Engine.
 	retrofit.pending = kept
 end
 
+local recordRefusal = function(retrofit : RetrofitState, buy : Buy, reason : string)
+	local kept : {Refusal} = {}
+	for _, r in ipairs(retrofit.refusals or {}) do
+		if r.construction ~= buy.construction then kept[#kept + 1] = r end
+	end
+	kept[#kept + 1] = { construction = buy.construction, click = buy.click, reason = reason:match("^%S+") or reason }
+	while #kept > maxRefusals do table.remove(kept, 1) end
+	retrofit.refusals = kept
+end
+
 -- Returns the reason a buy was refused, or nil when it was carried out.
 local processBuy = function(retrofit : RetrofitState, buy : Buy, t : number) : string
 	if core.paramKeys[buy.tree] == nil then return "unknownTree" end
@@ -348,8 +372,10 @@ local retrofitScript : GameScript<RetrofitState> = {
 			state:set(retrofit)
 			local ok, refused = pcall(processBuy, retrofit, buy, t)
 			if not ok or refused ~= nil then
+				local reason = ok and refused or ("error " .. tostring(refused))
 				say("buy refused construction=" .. tostring(buy.construction) .. " tree=" .. tostring(buy.tree) .. " from=" .. tostring(buy.from)
-					.. " reason=" .. tostring(ok and refused or ("error " .. tostring(refused))))
+					.. " reason=" .. reason .. " click=" .. tostring(buy.click))
+				if buy.click ~= nil then recordRefusal(retrofit, buy, reason) end
 			end
 			state:set(retrofit)
 		end
@@ -371,6 +397,7 @@ local retrofitScript : GameScript<RetrofitState> = {
 			construction = math.floor(tonumber(p.construction) or -1) as Engine.Entity,
 			tree = tostring(p.tree),
 			from = math.floor(tonumber(p.from) or -1),
+			click = tonumber(p.click) and math.floor(tonumber(p.click)) or nil,
 		}
 		local retrofit = loadState(state)
 		retrofit.buys = retrofit.buys or {}
@@ -378,7 +405,7 @@ local retrofitScript : GameScript<RetrofitState> = {
 		state:set(retrofit)
 		if logFull then
 			say("buy queued src=" .. tostring(src) .. " id=" .. tostring(id) .. " construction=" .. tostring(buy.construction)
-				.. " tree=" .. buy.tree .. " from=" .. tostring(buy.from) .. " queued=" .. tostring(#retrofit.buys))
+				.. " tree=" .. buy.tree .. " from=" .. tostring(buy.from) .. " click=" .. tostring(buy.click) .. " queued=" .. tostring(#retrofit.buys))
 		end
 	end,
 }

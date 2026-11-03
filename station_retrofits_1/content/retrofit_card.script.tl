@@ -26,6 +26,7 @@ local record Entry
 	buildPrice : number -- nil when the upkeep is unreadable
 	affordable : {string : boolean} -- per tree, whether the balance covers the next level; nil when unreadable
 	refused : boolean -- true when the game did not rebuild the station for its last buy (see readRefused)
+	short : boolean -- true when the game script refused the station's last buy for want of money; nil otherwise
 end
 
 local record CardState
@@ -87,6 +88,8 @@ local cardKey = "stationRetrofitsCard"
 local buyEventId = "StationRetrofits"
 -- Copied in retrofits.script.tl; keep the copies equal.
 local buyEvent = "stationRetrofitsBuy"
+-- The game script's name as the game logs it when it adds the script to a save ("Creating entity for newly added GameScript").
+local gameScriptName = "station_retrofits_1::/retrofits.gs"
 
 -- Stock icons, as Depot Retrofits uses them: the line manager's standard-priority dot for the catchment circle, the vehicle
 -- window's pollution and noise (gui/entity_window/vehicle/vehicle.tl), the upkeep footer's symbol
@@ -160,7 +163,11 @@ end
 -- the click; when that tree has not gone up some seconds later, the game refused it (nothing is charged then), and the card
 -- says so until a level lands. It waits for the clicked tree, not for any change: a level of another tree landing just
 -- after the click let a second click through, sent with the old level (the game script refused it as stale). A click while it shows keeps the warning up, so a retry the game refuses again does not make it
--- blink; a buy sent again replaces the refused one in the game script. Kept per construction for the session, so the warning
+-- blink; a buy sent again replaces the refused one in the game script. A buy the game script itself refused never reaches the
+-- game, so while waiting the card also reads the game script's state for its click: refused there for want of money (the
+-- balance can fall between the card's last read and the game script's check), the card says so instead, until the next click,
+-- a new level, or once it has shown for about 10 seconds and the money covers the clicked level again (see readShort). Kept
+-- per construction for the session, so the warning
 -- is still there when the window is opened again. Depot Retrofits also shows what is in the way, with the game's proposal
 -- viewer in the window's action area; the station window gives its cards no action area (setActionFn), so the card only
 -- says it.
@@ -169,8 +176,22 @@ local record Try
 	from : integer -- the tree's level the card showed at the click
 	at : number -- clockNow() at the click
 	step : integer -- stepCount at the click
+	click : integer -- sent with the buy, which the game script keeps with a refusal
 end
 local tries : {Engine.Entity : Try} = {}
+local record Short
+	levels : string -- core.describe of the levels when the game script refused the buy for want of money
+	tree : string -- the tree of that buy
+	at : number -- clockNow() then
+	step : integer -- stepCount then
+end
+local short : {Engine.Entity : Short} = {}
+-- How long the "Not bought" note shows at least, so it can be read: nine to ten seconds, as os.time ticks whole seconds
+-- (30 seconds was found too long in game, 5 too short to read). Steps as for refusedAfterSteps, only where os.time is not
+-- available.
+local shortForSeconds = 10
+local shortForSteps = 600
+local clicks = 0
 local refused : {Engine.Entity : string} = {} -- the levels when the buy was found refused; cleared by a new level
 -- Nine to ten seconds: ten ticks of os.time, as the game API has no finer clock. The wait runs from the click, so it covers
 -- the game script taking up the buy as well as the build: harbours took 2 to 3 seconds to build, and with the processor
@@ -188,16 +209,57 @@ local clockNow = function() : number, boolean
 	return stepCount, false
 end
 
+-- The game script's state, read as company_rank.tl reads the progression script's.
+local record ScriptRefusal
+	construction : Engine.Entity
+	click : integer
+	reason : string
+end
+local record ScriptState
+	refusals : {ScriptRefusal}
+end
+local scriptErrorLogged = false
+
+-- The game script's reason for refusing the click's buy ("noMoney", "rank" and so on), or nil while it has given none.
+-- Looked up each time, not kept: the entity is the save's. Only read while a click waits, so at most ten seconds at a time.
+local scriptRefusal = function(construction : Engine.Entity, click : integer) : string
+	local entity = api.engine.system.gameScriptSystem.getEntityForGameScript(gameScriptName)
+	local component = api.engine.getComponent(entity, api.type.ComponentType.GAME_SCRIPT) as Engine.Component.GameScript<ScriptState>
+	local state = component and component.state
+	for _, r in ipairs(state and state.refusals or {}) do
+		if r.construction == construction and r.click == click then return r.reason end
+	end
+	return nil
+end
+
 -- Whether the construction's last buy was refused by the game: the clicked tree did not go up within the wait after the
--- click. Called once per construction on each of the card's steps.
+-- click, and the game script did not refuse it itself. Called once per construction on each of the card's steps.
 local readRefused = function(construction : Engine.Entity, levels : {string : integer}) : boolean
 	stepCount = stepCount + 1
 	local current = core.describe(levels)
 	local try = tries[construction]
+	local reason : string = nil
+	if try ~= nil and (levels[try.tree] or 0) <= try.from then
+		local ok, result = pcall(scriptRefusal, construction, try.click)
+		if ok then
+			reason = result
+		elseif not scriptErrorLogged then
+			scriptErrorLogged = true
+			say("card scriptStateError name=" .. gameScriptName .. " error=" .. tostring(result))
+		end
+	end
 	if try ~= nil then
 		local now, isClock = clockNow()
 		if (levels[try.tree] or 0) > try.from then
 			tries[construction] = nil
+		elseif reason ~= nil then
+			tries[construction] = nil
+			if reason == "noMoney" then
+				short[construction] = { levels = current, tree = try.tree, at = now, step = stepCount }
+				refused[construction] = nil
+			end
+			say("card notBought construction=" .. tostring(construction) .. " tree=" .. try.tree .. " levels=" .. current
+				.. " reason=" .. reason .. " waited=" .. tostring(now - try.at) .. " clock=" .. tostring(isClock))
 		elseif (isClock and now - try.at >= refusedAfterSeconds) or (not isClock and stepCount - try.step >= refusedAfterSteps) then
 			tries[construction] = nil
 			refused[construction] = current
@@ -206,7 +268,23 @@ local readRefused = function(construction : Engine.Entity, levels : {string : in
 		end
 	end
 	if refused[construction] ~= nil and refused[construction] ~= current then refused[construction] = nil end
+	if short[construction] ~= nil and short[construction].levels ~= current then short[construction] = nil end
 	return refused[construction] ~= nil
+end
+
+-- Whether the "Not bought" note still shows: it goes once it has shown for shortForSeconds and the balance covers the
+-- clicked tree's next level again, checked on each of the card's steps, so the enabled buy button replaces it. Still short
+-- of money, it stays. Called after readAffordable; with the balance unreadable it goes after shortForSeconds.
+local readShort = function(entry : Entry) : boolean
+	local note = short[entry.construction]
+	if note == nil then return false end
+	local now, isClock = clockNow()
+	local shown = (isClock and now - note.at >= shortForSeconds) or (not isClock and stepCount - note.step >= shortForSteps)
+	if shown and (entry.affordable == nil or entry.affordable[note.tree] ~= false) then
+		short[entry.construction] = nil
+		return false
+	end
+	return true
 end
 
 local constructionParams = function(construction : Engine.Component.Construction) : {string:any}
@@ -292,11 +370,14 @@ local readCard = function(group : Engine.Entity) : CardState
 		local okRefused, wasRefused = pcall(readRefused, entry.construction, entry.levels)
 		entry.refused = okRefused and wasRefused or nil
 		local afford = readAffordable(entry, okBalance and tonumber(balance) or nil)
+		local okShort, isShort = pcall(readShort, entry)
+		entry.short = okShort and isShort or nil
 		parts[#parts + 1] = tostring(entry.construction) .. ":" .. entry.kind .. ":" .. core.describe(entry.levels)
 			.. ":stations=" .. tostring(entry.stations) .. ",circles=" .. tostring(entry.circles)
 			.. ",terminals=" .. tostring(entry.terminals) .. ",radius=" .. string.format("%.1f", entry.radius or -1)
 			.. "/" .. string.format("%.1f", entry.baseRadius or -1) .. ",upkeep=" .. tostring(entry.upkeep)
 			.. ",buildPrice=" .. tostring(entry.buildPrice) .. ",affordable=" .. afford .. ",refused=" .. tostring(entry.refused)
+			.. ",short=" .. tostring(entry.short)
 	end
 	s.key = table.concat(parts, " ")
 	return s
@@ -349,7 +430,7 @@ local getDrawnStyles = function() : {string : StyleSheet}
 	return drawnStyles ~= nil and drawnStyles.gap ~= nil and drawnStyles or nil
 end
 
--- The "Not rebuilt" banner, drawn as Depot Retrofits draws it, after the yellow caution cards at the top of the town and line
+-- The banners ("Not rebuilt", "Not bought"), drawn as Depot Retrofits draws them, after the yellow caution cards at the top of the town and line
 -- windows (entity_window_util.NotificationWidget in gui/entity_window/entity_window_util.tl): the card surface tinted with
 -- the caution colour at the game's high transparency, the icon on a solid caution tile (the colours and sizes are in
 -- game_mechanics/notifications/gui/notifications.css.lua; Caution is #FFC40C, gui/main/color_internal.lua). That CSS matches
@@ -358,10 +439,16 @@ end
 -- failure, and the banner falls back to plain lines.
 local bannerStyles : {string : StyleSheet} = nil
 local caution = { 1, 0.769, 0.047 }
-local bannerIcon = "::/game_mechanics/notifications/gui/icons/building_industry_bulldozer.tga"
+local refusedIcon = "::/game_mechanics/notifications/gui/icons/building_industry_bulldozer.tga"
 local refusedLines = {
 	"Not rebuilt: a building, road or track is in the way.",
 	"Nothing was charged. Clear it and buy again.",
+}
+-- The dollar of the base task reward notification (mission/notification.script.tl).
+local shortIcon = "::/game_mechanics/notifications/gui/icons/symbol_dollar.tga"
+local shortLines = {
+	"Not bought: not enough money at the time of the buy.",
+	"Nothing was charged.",
 }
 
 local getBannerStyles = function() : {string : StyleSheet}
@@ -399,7 +486,7 @@ local getBannerStyles = function() : {string : StyleSheet}
 	return bannerStyles ~= nil and bannerStyles.surface ~= nil and bannerStyles or nil
 end
 
-local banner = function(bannerLines : {string}) : TreeNodeId
+local banner = function(bannerIcon : string, bannerLines : {string}) : TreeNodeId
 	local lines : {TreeNodeId} = {}
 	for _, line in ipairs(bannerLines) do
 		lines[#lines + 1] = builtin.TextView{ meta = { class = "font-scale-body" }, text = line, tooltipWhenClipped = line }
@@ -558,24 +645,34 @@ local buyButton = function(s : CardState, entry : Entry, tree : string) : TreeNo
 			if not enabled then return end
 			-- One buy at a time per station: a second click before the first lands or is refused is ignored.
 			if tries[construction] ~= nil then return end
-			tries[construction] = { tree = tree, from = level, at = clockNow(), step = stepCount }
+			local now, isClock = clockNow()
+			-- Numbered from the clock too, so a refusal kept in the save from an earlier session does not match a new click.
+			clicks = clicks + 1
+			local click = isClock and (math.floor(now) % 100000) * 100 + clicks % 100 or clicks
+			tries[construction] = { tree = tree, from = level, at = now, step = stepCount, click = click }
+			short[construction] = nil
 			if logFull then
 				say("card buy construction=" .. tostring(construction) .. " tree=" .. tree .. " from=" .. tostring(level)
-					.. " shownPrice=" .. tostring(price))
+					.. " shownPrice=" .. tostring(price) .. " click=" .. tostring(click))
 			end
 			api.cmd.sendCommand(api.cmd.makeScriptingSendEventCmd("", buyEventId, buyEvent,
-				{ construction = construction, tree = tree, from = level }))
+				{ construction = construction, tree = tree, from = level, click = click }))
 		end,
 	}
 end
 
--- Collapsed: per tree the symbol, the boxes and what the levels do now; above them the banner after a refused buy, so it
+-- Collapsed: per tree the symbol, the boxes and what the levels do now; above them the banner after a refused buy (a refused
+-- rebuild, or a buy refused for want of money), so it
 -- shows whether the card is open or not.
 local summaryRows = function(s : CardState) : {TreeNodeId}
 	local rows : {TreeNodeId} = {}
 	for _, entry in ipairs(s.entries) do
 		heading(s, entry, rows)
-		if entry.refused then rows[#rows + 1] = banner(refusedLines) end
+		if entry.refused then
+			rows[#rows + 1] = banner(refusedIcon, refusedLines)
+		elseif entry.short then
+			rows[#rows + 1] = banner(shortIcon, shortLines)
+		end
 		for _, tree in ipairs(core.trees) do
 			local level = entry.levels[tree]
 			local left : {TreeNodeId} = { icon(treeIcons[tree]) }
