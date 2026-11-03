@@ -284,3 +284,12 @@ Save `WR26A Giga-Tv3 1907 1102-2020` (Feb 1907, rank 7 then 8), with Depot Retro
 - No `card scriptStateError`: the card reads the game script's state. No `Error while loading game script`.
 - How long the note stays, tried later with a temporary edit that refused every noise buy as `noMoney`: 30 seconds was too long; 10 seconds was right for reading it. It now shows for 10 seconds, then goes once the money covers the level again (spec).
 - Depot Retrofits' fix showed the same in the same session: two `window notBought reason=noMoney` (road depot 254563, Oakheart Ship Depot 241189), the note in the depot's tab.
+
+### 2026-11-03: buys at 2x to 4x, pending buys bounded by real seconds
+
+Save `WR26A Giga-Tv3 1911 1103-1109` (1911, rank 11), logLevel `"full"`, with the game script giving up a pending buy after 30 real seconds only (a game day had bounded it too). Log: `local/logs/stdout-20261103-pending1.txt` (16:09 to 16:27 UTC).
+
+- **132 buys on 13 stations, all charged once:** 3 harbours (28 buys, WATER), 9 road stations (2 of them with tram tracks, TRAM), 1 rail station (13 buys, RAIL). No `notLanded`, no refusal, no `card notRebuilt` or `card notBought`.
+- **The game ran at about 1.5x to 4x.** Other mods' lines carry the game time: the clock ran at 1,500 to 4,000 units a real second while buying, so a game day passed in 1 to 3 seconds.
+- **The harbours landed within a second** of `buy sent` this time, not the 2 to 3 seconds of 2026-11-01, so no buy needed the longer wait: a game-day bound would most likely have let these through too. A harbour that lands slower than a game day at 4x is still to be seen.
+- No `Error while loading game script`, no error from the mod; the one stack trace comes from the base game's GUI (`gui/main/selector_react_util.tl`). No `hookAgain`.
