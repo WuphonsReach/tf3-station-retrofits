@@ -29,6 +29,11 @@ local core : StationRetrofitsCore = {
 		["stations/street/modular_street_station/modular_terminal.con"] = "street",
 		["stations/water/harbor_modular.con"] = "harbour",
 	},
+	-- Trees a kind of station does not get. A harbour's emitter reads 0 and the overlays show no pollution or noise at a port
+	-- (docs/design/findings.md, 2026-11-05), so a level of either would change nothing.
+	noTrees = {
+		harbour = { pollution = true, noise = true },
+	},
 	names = {
 		catchment = "Catchment radius",
 		pollution = "Pollution",
@@ -70,6 +75,31 @@ function core.read(params : {string : any}) : {string : integer}
 		local raw = params and tonumber(params[core.paramKeys[tree]])
 		local level = raw and (math.floor(raw) - 1) or 0
 		result[tree] = math.max(0, math.min(core.maxLevel, level))
+	end
+	return result
+end
+
+-- Whether stations of this kind get the tree.
+function core.hasTree(kind : string, tree : string) : boolean
+	local none = core.noTrees[kind]
+	return none == nil or not none[tree]
+end
+
+-- The trees of a kind of station, in display order.
+function core.treesOf(kind : string) : {string}
+	local list : {string} = {}
+	for _, tree in ipairs(core.trees) do
+		if core.hasTree(kind, tree) then list[#list + 1] = tree end
+	end
+	return list
+end
+
+-- The levels of a station of this kind: as read, with 0 for a tree the kind does not get, so a level stored for it (a harbour
+-- levelled before ports lost those trees) has no effect and is not priced.
+function core.readFor(params : {string : any}, kind : string) : {string : integer}
+	local result = core.read(params)
+	for _, tree in ipairs(core.trees) do
+		if not core.hasTree(kind, tree) then result[tree] = 0 end
 	end
 	return result
 end
@@ -258,7 +288,7 @@ function core.wrapUpdate(original : function(any, any) : any, kind : string, say
 		local result = original(captureParams, params)
 		if type(result) ~= "table" then return result end
 		local p = (type(params) == "table" and params or {}) as {string : any}
-		local values = core.read(p)
+		local values = core.readFor(p, kind)
 		if core.isZero(values) then return result end
 		local r = result as {string : any}
 		local hook = r.terminateConstructionHook

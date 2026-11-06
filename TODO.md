@@ -2,8 +2,8 @@
 
 ## In short
 
-- **Where it stands.** Probes 1 and 2 work in game: levels applied by a rebuild, all values as the formulas say for 30 days, and a Retrofit card in the station window showing them. Buying a level from the card is built (game script, buy buttons, "Not rebuilt" banner) and not yet tested. Configure (the station's module editor) keeps the bought levels on road stations; the other rebuilds the game starts and kerbside stops are not tested yet.
-- **Next.** Test buying in game (below), then probe 3 (rebuilds the game starts) with bought levels, in one session with the probe 1 and 2 leftovers (results so far in [docs/design/findings.md](docs/design/findings.md)). Decisions so far are in [docs/design/spec.md](docs/design/spec.md), "Decisions".
+- **Where it stands.** Probes 1 and 2 work in game: levels applied by a rebuild, all values as the formulas say for 30 days, and a Retrofit card in the station window showing them. Buying a level from the card is built (game script, buy buttons, "Not rebuilt" banner) and not yet tested. Configure (the station's module editor) keeps the bought levels on road and tram stations, and module edits on a cargo rail station kept them; era swaps and catenary are not tested yet. Harbours get only the catchment and upkeep trees (a port emits no pollution or noise). Kerbside stops are out of scope.
+- **Next.** Test buying in game (below), then the rest of probe 3 (era swap, catenary) with bought levels, in one session with the probe 1 and 2 leftovers (results so far in [docs/design/findings.md](docs/design/findings.md)). Decisions so far are in [docs/design/spec.md](docs/design/spec.md), "Decisions".
 
 ## Set-up
 
@@ -18,10 +18,10 @@
 ## Probes ([docs/design/probe-plan.md](docs/design/probe-plan.md))
 
 - [x] Probe 1: rebuild 3 stations with fixed levels (findings, test results): wrapper, ids, cost, upkeep, catchment, capacity, emissions all as the formulas say.
-- [ ] Probe 1 leftovers: a crowded station and a vehicle at a platform during a rebuild; save and load of a levelled station (load `WR26A Giga-Tv3 1915 1101-1303-test`). Done: 30 days, the beam beside the circle centres.
+- [ ] Probe 1 leftovers: a vehicle at a platform during a rebuild, and whether a crowded station's waiting counts survive one (102 / 144 waiting at Holbeach seen with buys, the counts after each rebuild not read); save and load of a levelled station (load `WR26A Giga-Tv3 1915 1101-1303-test`). Done: 30 days, the beam beside the circle centres.
 - [x] Probe 2: Retrofit card in the station window (plugin extension point, not `entityWindowScript`), base window unchanged. Left: a station placed in session, a group of two constructions, next to another mod's card.
-- [ ] Probe 3: module edits, era swaps and catenary keep the levels. Done: Configure on two road stations, platforms and a module added (findings, test results). Left: a rail station (add a platform, remove a module), an era swap, catenary.
-- [ ] Probe 4: kerbside stops (edge objects) can be replaced.
+- [ ] Probe 3: module edits, era swaps and catenary keep the levels. Done: Configure on two road stations, platforms and a module added; a cargo rail station with modules added, removed and moved; a tram terminal (findings, test results). Left: an era swap, catenary.
+- [x] Probe 4: dropped, kerbside stops are out of scope (2026-11-05).
 - [ ] Record each probe's results in [docs/design/findings.md](docs/design/findings.md) (In short first, test results at the bottom).
 
 ## Desk checks (no game needed)
@@ -36,11 +36,12 @@
 
 ## After the probes
 
-- [ ] Fix the spec: trees, shares, scope (airports, underground station, kerbside stops), the upkeep tree.
+- [ ] Fix the spec: trees, shares, scope (airports, underground station), the upkeep tree. Kerbside stops are out.
 - [x] Buying, from Depot Retrofits' 1.2 code: prices in `core.tl`, the game script `retrofits.script.tl` (buy queue, checks, rebuild, charge on landing), buy buttons and the "Not rebuilt" banner in the card. The probe 1 game script is retired (git history).
 - [ ] Test buying in game. Done on a rail station (11 buys, all four trees): prices, charges, upkeep and catchment as the card showed (findings, test results). Then 70 buys on six stations (rail, road with tram, cargo rail, cargo road, harbour): charges under Investments, Infrastructure, to the dollar; the three-part rows fit; "Rank 14" greyed at rank 13. 132 buys at 1.5x to 4x on 13 stations, harbours included, all charged once (findings, 2026-11-03). Left: a harbour that lands slower than a game day at 4x (the game script now waits 30 real seconds); harbour buys with the longer waits (no flash); greyed for money; a refused rebuild shows the banner and charges nothing; buying while the game runs.
-- [x] Prices lowered after the pollution test (spec, "Price and upkeep"). Not yet seen in game.
-- [ ] Find where a harbour's pollution and noise are emitted (findings, unknown 13): its station emitter read 0.
+- [x] Prices lowered after the pollution test (spec, "Price and upkeep"). Seen in game: Thornwick's first pollution level $12,300 on a $307,500 build price (findings, 2026-11-05).
+- [x] Harbours: no pollution or noise trees (card rows, game script refusal `noTree`, wrapper), after the overlays showed no emission at a port (findings, 2026-11-05; spec). Not yet seen in game. Open: a cheaper upkeep tree for harbours (spec, open decision 1).
+- [ ] Read a tram station's emitter a game day after a buy (290199 stayed 0 / 0 for 30 seconds; 390832 refilled within a second): add a delayed read to the `full` log.
 - [x] "Not bought" note for buys refused for money (spec), from Depot Retrofits' fix for the same case. Seen in game on a harbour (findings, test results); before it, two such buys on a tram station showed "Not rebuilt".
 - [ ] "Not rebuilt": show what is in the way (the proposal viewer needs an action area the station window does not give its cards; findings).
 - [ ] User guide, listing text, cover and gallery, release process (`docs/publishing.md` from Depot Retrofits).

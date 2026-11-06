@@ -6,6 +6,8 @@ global record StationRetrofitsCore
 	trees : {string} -- the four trees in display order
 	paramKeys : {string : string} -- tree -> construction param key
 	names : {string : string} -- tree -> display name
+	-- Per kind, the trees its stations do not get (harbours: pollution and noise).
+	noTrees : {string : {string : boolean}}
 
 	-- The base station scripts and constructions, by the end of their path (".lua" stripped), and the kind each log line names.
 	scriptKinds : {string : string}
@@ -15,6 +17,11 @@ global record StationRetrofitsCore
 
 	-- The levels stored in a construction's params, 0 for a tree with no param (a station placed before the mod, or new).
 	read : function(params : {string : any}) : {string : integer}
+	-- Whether stations of the kind get the tree, and the trees they get in display order.
+	hasTree : function(kind : string, tree : string) : boolean
+	treesOf : function(kind : string) : {string}
+	-- read, with 0 for a tree the kind does not get.
+	readFor : function(params : {string : any}, kind : string) : {string : integer}
 	-- Writes the levels into a params table, in the stored form (1-based index into "0".."15").
 	store : function(params : {string : any}, levels : {string : integer})
 	-- "catchment/pollution/noise/upkeep", as the log lines write levels; "nil" for nil.

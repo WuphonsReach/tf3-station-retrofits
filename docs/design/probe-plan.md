@@ -51,7 +51,9 @@ By hand, on a levelled station from probe 1: add a platform, remove a module, sw
 
 **Pass.** Each edit goes through the wrapper (log line) and keeps the five levels; the scaled values match the formula for the new module set; the upkeep is (base + modules) × the level factor.
 
-## Probe 4: kerbside stops
+## Probe 4: kerbside stops (dropped)
+
+Kerbside stops are out of scope for this mod (decided 2026-11-05), so this probe will not run. Kept for reference if that changes.
 
 **Build.** Wrap the kerbside stop script (`street/small_stops/small_stops.script`; scale straight away, as stops have no hook), scale the `streetTerminal` capacity and catchment radius, and have the game script rebuild one stop with `replaceSegment` and a new `SimpleStreetProposal.EdgeObject` carrying the copied params (the method other mods use). Note: one mod replaces the stop script outright (last wins), so a stop tree may not reach every player.
 

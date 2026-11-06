@@ -4,7 +4,7 @@
 
 Stations get levels, bought one at a time in the station's own window, the way [Depot Retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits) does it for depots. This is a draft: every number below is a starting point taken from Depot Retrofits, and the scope depends on the probes in [probe-plan.md](probe-plan.md). Levels are applied and shown (probes 1 and 2); buying them is built and not yet tested in game.
 
-The planned first version has three trees of 15 levels each (catchment radius, pollution, noise), plus an upkeep tree. Waiting capacity is not a tree: players already add it by building more station modules, and mods with larger stops or modules cover the rest. It covers the base modular stations (rail, road and tram terminals, harbours) and later stations from other mods that have the same shape. A tree's highest level is the company's claimed rank. A level is applied by rebuilding the station with new hidden params, as for depots.
+The planned first version has three trees of 15 levels each (catchment radius, pollution, noise), plus an upkeep tree. Harbours get only the catchment and upkeep trees: a port emits no pollution or noise of its own (findings, 2026-11-05). Waiting capacity is not a tree: players already add it by building more station modules, and mods with larger stops or modules cover the rest. It covers the base modular stations (rail, road and tram terminals, harbours) and later stations from other mods that have the same shape. A tree's highest level is the company's claimed rank. A level is applied by rebuilding the station with new hidden params, as for depots.
 
 ## Scope
 
@@ -12,10 +12,10 @@ The planned first version has three trees of 15 levels each (catchment radius, p
 |---|---|---|
 | Train station | yes | modular, values in `terminateConstructionHook` |
 | Road and tram terminal | yes | same |
-| Harbour | yes | same |
+| Harbour | yes, catchment and upkeep only | same; its station emits no pollution or noise, so those trees would do nothing (findings, 2026-11-05) |
 | Airport, airfield, heliport | later | also contain a depot (hangar); keep them apart from Depot Retrofits first |
 | Underground station | maybe | not modular; upkeep set by the script, so the upkeep tree would work as for depots |
-| Kerbside bus and tram stops | only if probe 4 works | edge objects; replacing one in place is untested |
+| Kerbside bus and tram stops | no | out of scope for this mod (decided 2026-11-05); they are edge objects and get no card |
 | Warehouse | no | holds stocks, not a station pool |
 | Stations from other mods | where their result has the same shape | detect by the result (a `station` table), not by folder |
 
@@ -32,6 +32,7 @@ The two kinds of tree carry over from Depot Retrofits: three trees improve the s
 
 Notes:
 
+- **Harbours have two trees.** The card, the game script and the wrapper leave out pollution and noise for a harbour (`core.noTrees`). Every harbour's station emitter read 0 before its first level, and in the game's pollution and noise overlays a port and its wharves show no halo of their own, also after the port was expanded (findings, 2026-11-05). A level stored for either tree on a harbour is read as 0, so it has no effect and is not priced.
 - **Catchment is the strongest tree.** It brings more town into reach of the station, so more passengers and cargo, which no depot tree does. So it has smaller steps than the depot radius tree (+3%, not +5%) and a higher price (share 0.20). Base circles are 50 to 250 m (a rail station has several 60 m ones), so the floor decides small circles: at 5 m a level, a 60 m circle grows +5 m a level (+75 m, +125%, at level 15) and a 175 m one +5.25 m.
 - **Left out: waiting capacity.** Players add waiting places by building more station modules, and mods with larger stops or modules cover the rest; a bought level would only duplicate that.
 - **Left out for now: comfort and load speed.** Both are set in the same hook, but their effect is decided in the engine and unmeasured. Add them only after a test shows what a level does in play.
@@ -50,6 +51,16 @@ Notes:
 
   Catchment is the dearest, as it brings in more town (passengers and cargo). Pollution and noise are cheap and rise slowly: stations are only part of a town's pollution, so pollution 9 on all 16 stations of a town cut its pollution by about 11% (findings, test results). The upkeep tree is priced to pay for itself: on a station with the other three trees full (5.5 × the base upkeep), the full tree costs 45.7 × the base upkeep and saves 4.1 × a year, about 11 years (level 1 in 3.5 years, level 15 in 25). On a station with no other levels it saves only 0.75 × a year. Depot Retrofits keeps its own shares (0.15, 0.08, 0.12, 0.25) and one step of 1.15.
 - **Upkeep.** Each improving level adds a share of the base upkeep: 15% catchment, 10% noise, 5% pollution. The upkeep tree multiplies the total by (1 − 0.05 × levels).
+- **Payback of the upkeep tree on a harbour is longer.** A harbour has no pollution or noise level to add upkeep, so at most its catchment (15% a level) raises the total, to 3.25 × the base upkeep at level 15, where a rail or road station with all three trees full is at 5.5 ×. The tree's price is the same (45.7 × the base upkeep for all 15 levels), so it pays back more slowly (a level saves 5% of the total a year, and costs 0.96 × the base upkeep at level 1, up to 6.8 × at level 15):
+
+| Harbour's catchment | Upkeep level 1 | Upkeep level 15 | All 15 levels |
+|---|---|---|---|
+| 0 (no levels) | 19 years | 136 years | 61 years |
+| 8 (about half) | 9 years | 62 years | 28 years |
+| 15 (full) | 6 years | 42 years | 19 years |
+| *Rail or road station, all three trees full (for comparison)* | *3.5 years* | *25 years* | *11 years* |
+
+  What a harbour's levels buy is the range (catchment) and the upkeep cut, nothing else, so on a port the upkeep tree is the weaker buy. Left as it is for now (the same shares and steps as the other stations); lowering its share for harbours would bring the payback back toward 11 years, at the cost of a second price table. The catchment tree has no payback figure: what a larger circle earns depends on the town.
 - **How upkeep is applied.** After the hook, the script's `maintenanceCost` already holds the modules' upkeep, and the game charges what the script leaves there; the wrapper multiplies it by the upkeep factor (probe 1).
 - **Modules added later.** As in Depot Retrofits, levels are not repriced when the station grows; the upkeep the levels add follows the modules. Big stations pay big prices, since the build price grows with the modules.
 
@@ -74,8 +85,11 @@ As in Depot Retrofits: a tree's maximum level is the claimed company rank; no le
 - Name "Station Retrofits", folder `station_retrofits_1`, log prefix `STATION_RETROFITS` (mod.io still to be checked for a clash).
 - Catchment is in: +3% per level, at least +5 m, first-level share 0.20.
 - Waiting capacity is out: more station modules, or mods with larger stops or modules, already add it.
+- Harbours get the catchment and upkeep trees only (their emitter reads 0 and the overlays show no pollution or noise at a port); their upkeep tree pays back in about 19 years with full catchment, against 11 on other stations, and is left at the same price.
+- Kerbside bus and tram stops are out of scope for this mod (decided 2026-11-05).
 - Prices (after the pollution test): pollution 0.04 with a step of 1.10, noise 0.08 with 1.12, upkeep 0.16 so that a fully levelled station's upkeep tree pays back in about 11 years; catchment unchanged. Pollution and noise levels still add 5% and 10% of the base upkeep.
 
 ## Open decisions (for the user)
 
-1. Whether kerbside stops are in scope (after probe 4).
+1. Whether a harbour's upkeep tree should be cheaper, so that it pays back as fast as on other stations (about 11 years against 19). Today it is not.
+2. Whether to look for what a port does emit (its ships' own pollution and noise are vehicle emissions, which no tree touches) and give harbours those levels.
