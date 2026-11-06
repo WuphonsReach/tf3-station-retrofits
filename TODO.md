@@ -18,7 +18,7 @@
 ## Probes ([docs/design/probe-plan.md](docs/design/probe-plan.md))
 
 - [x] Probe 1: rebuild 3 stations with fixed levels (findings, test results): wrapper, ids, cost, upkeep, catchment, capacity, emissions all as the formulas say.
-- [ ] Probe 1 leftovers: a vehicle at a platform during a rebuild, and whether a crowded station's waiting counts survive one (102 / 144 waiting at Holbeach seen with buys, the counts after each rebuild not read); save and load of a levelled station (load `WR26A Giga-Tv3 1915 1101-1303-test`). Done: 30 days, the beam beside the circle centres.
+- [ ] Probe 1 leftovers: a vehicle at a platform during a rebuild. Done: waiting passengers survive rebuilds (102 / 144 at Holbeach through six buys, 12 and 24 of 144 at Peterlee South-Central through 35; findings, 2026-11-05), waiting cargo not seen; save and load of a levelled station (load `WR26A Giga-Tv3 1915 1101-1303-test`). Done: 30 days, the beam beside the circle centres.
 - [x] Probe 2: Retrofit card in the station window (plugin extension point, not `entityWindowScript`), base window unchanged. Left: a station placed in session, a group of two constructions, next to another mod's card.
 - [ ] Probe 3: module edits, era swaps and catenary keep the levels. Done: Configure on two road stations, platforms and a module added; a cargo rail station with modules added, removed and moved; a tram terminal (findings, test results). Left: an era swap, catenary.
 - [x] Probe 4: dropped, kerbside stops are out of scope (2026-11-05).
@@ -27,8 +27,8 @@
 ## Desk checks (no game needed)
 
 - [x] Which `JournalEntry.Construction` value suits a station charge: `STATION` (`scripts/journal.d.tl`); still to see in the Finances tab.
-- [ ] Whether base station `.con` files set `constructionType`.
-- [ ] Whether the rail and street `upgradeFn` return the other params unchanged (`rail/modular_station/modular_station.script.lua` around line 351). Street: Configure kept them in game (probe 3).
+- [x] Whether base station `.con` files set `constructionType`: none of the 14 does (findings, 2026-11-05).
+- [x] Whether the rail and street `upgradeFn` return the other params unchanged: both do (findings, 2026-11-05). Left to see in game: an era swap and catenary (probe 3).
 - [x] How the station window shows catchment and capacity: a Waiting Hall row and terminal rows with waiting / capacity (passenger terminals only), the upkeep footer; no catchment figure (findings, test results). The card need not repeat them.
 - [x] Survey the mods that change the same values or the station window: 13 mods read (notes in `local/competitors.md`, lessons in [docs/design/findings.md](docs/design/findings.md), "Seen in other mods' code").
 - [ ] Test the levels with the most used of them active (after probe 1).
@@ -40,7 +40,7 @@
 - [x] Buying, from Depot Retrofits' 1.2 code: prices in `core.tl`, the game script `retrofits.script.tl` (buy queue, checks, rebuild, charge on landing), buy buttons and the "Not rebuilt" banner in the card. The probe 1 game script is retired (git history).
 - [ ] Test buying in game. Done on a rail station (11 buys, all four trees): prices, charges, upkeep and catchment as the card showed (findings, test results). Then 70 buys on six stations (rail, road with tram, cargo rail, cargo road, harbour): charges under Investments, Infrastructure, to the dollar; the three-part rows fit; "Rank 14" greyed at rank 13. 132 buys at 1.5x to 4x on 13 stations, harbours included, all charged once (findings, 2026-11-03). Left: a harbour that lands slower than a game day at 4x (the game script now waits 30 real seconds); harbour buys with the longer waits (no flash); greyed for money; a refused rebuild shows the banner and charges nothing; buying while the game runs.
 - [x] Prices lowered after the pollution test (spec, "Price and upkeep"). Seen in game: Thornwick's first pollution level $12,300 on a $307,500 build price (findings, 2026-11-05).
-- [x] Harbours: no pollution or noise trees (card rows, game script refusal `noTree`, wrapper), after the overlays showed no emission at a port (findings, 2026-11-05; spec). Not yet seen in game. Open: a cheaper upkeep tree for harbours (spec, open decision 1).
+- [x] Harbours: no pollution or noise trees (card rows, game script refusal `noTree`, wrapper), after the overlays showed no emission at a port (findings, 2026-11-05; spec). Not yet seen in game. A harbour's upkeep tree costs half (spec); not yet seen in game.
 - [ ] Read a tram station's emitter a game day after a buy (290199 stayed 0 / 0 for 30 seconds; 390832 refilled within a second): add a delayed read to the `full` log.
 - [x] "Not bought" note for buys refused for money (spec), from Depot Retrofits' fix for the same case. Seen in game on a harbour (findings, test results); before it, two such buys on a tram station showed "Not rebuilt".
 - [ ] "Not rebuilt": show what is in the way (the proposal viewer needs an action area the station window does not give its cards; findings).
