@@ -288,9 +288,10 @@ local processBuy = function(retrofit : RetrofitState, buy : Buy, t : number) : s
 	if con == nil then return "noConstruction" end
 	local kind = core.kindOf(con.fileName, core.constructionKinds)
 	if kind == nil then return "notStation fileName=" .. tostring(con.fileName) end
+	if not core.hasTree(kind, buy.tree) then return "noTree kind=" .. kind end
 	if hasLevelParams(con) == false then return "noLevelParams fileName=" .. tostring(con.fileName) end
 	local params = constructionParams(con)
-	local from = core.read(params)
+	local from = core.readFor(params, kind)
 	if from[buy.tree] ~= buy.from then return "stale stored=" .. tostring(from[buy.tree]) end
 	if buy.from >= core.maxLevel then return "maxLevel" end
 	local rank, _, rankSource = readRank()
@@ -298,7 +299,7 @@ local processBuy = function(retrofit : RetrofitState, buy : Buy, t : number) : s
 	if buy.from + 1 > rank then return "rank rank=" .. tostring(rank) end
 	local charged = chargedUpkeepOf(con)
 	if charged == nil then return "noUpkeep" end
-	local price = core.levelPrice(core.buildPrice(charged, from), buy.tree, buy.from + 1)
+	local price = core.levelPrice(core.buildPrice(charged, from), kind, buy.tree, buy.from + 1)
 	local balance = balanceOf()
 	if balance ~= nil and balance < price then return "noMoney balance=" .. tostring(balance) .. " price=" .. tostring(price) end
 

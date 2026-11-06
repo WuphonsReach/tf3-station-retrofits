@@ -29,6 +29,11 @@ local core : StationRetrofitsCore = {
 		["stations/street/modular_street_station/modular_terminal.con"] = "street",
 		["stations/water/harbor_modular.con"] = "harbour",
 	},
+	-- Trees a kind of station does not get. A harbour's emitter reads 0 and the overlays show no pollution or noise at a port
+	-- (docs/design/findings.md, 2026-11-05), so a level of either would change nothing.
+	noTrees = {
+		harbour = { pollution = true, noise = true },
+	},
 	names = {
 		catchment = "Catchment radius",
 		pollution = "Pollution",
@@ -50,6 +55,9 @@ local upkeepStep = 0.05
 -- itself in about 11 years.
 local firstLevelShare : {string : number} = { catchment = 0.20, pollution = 0.04, noise = 0.08, upkeep = 0.16 }
 local priceGrowth : {string : number} = { catchment = 1.15, pollution = 1.10, noise = 1.12, upkeep = 1.15 }
+-- A kind's level prices are this much of the table's for a tree: a harbour has no pollution or noise level to add upkeep, so
+-- its upkeep tree saves less and costs half (spec, "Price and upkeep").
+local kindPriceFactor : {string : {string : number}} = { harbour = { upkeep = 0.5 } }
 local buildPricePerUpkeep = 6 -- 80 of the 81 base station modules cost 6 times their yearly upkeep to build
 core.upkeepShares = upkeepPerLevel
 core.upkeepStep = upkeepStep
@@ -70,6 +78,31 @@ function core.read(params : {string : any}) : {string : integer}
 		local raw = params and tonumber(params[core.paramKeys[tree]])
 		local level = raw and (math.floor(raw) - 1) or 0
 		result[tree] = math.max(0, math.min(core.maxLevel, level))
+	end
+	return result
+end
+
+-- Whether stations of this kind get the tree.
+function core.hasTree(kind : string, tree : string) : boolean
+	local none = core.noTrees[kind]
+	return none == nil or not none[tree]
+end
+
+-- The trees of a kind of station, in display order.
+function core.treesOf(kind : string) : {string}
+	local list : {string} = {}
+	for _, tree in ipairs(core.trees) do
+		if core.hasTree(kind, tree) then list[#list + 1] = tree end
+	end
+	return list
+end
+
+-- The levels of a station of this kind: as read, with 0 for a tree the kind does not get, so a level stored for it (a harbour
+-- levelled before ports lost those trees) has no effect and is not priced.
+function core.readFor(params : {string : any}, kind : string) : {string : integer}
+	local result = core.read(params)
+	for _, tree in ipairs(core.trees) do
+		if not core.hasTree(kind, tree) then result[tree] = 0 end
 	end
 	return result
 end
@@ -131,8 +164,9 @@ function core.buildPrice(chargedUpkeep : number, values : {string : integer}) : 
 	return 100 * round(buildPricePerUpkeep * chargedUpkeep / core.upkeepFactor(values) / 100)
 end
 
-function core.levelPrice(buildPrice : number, tree : string, level : integer) : integer
-	return round(firstLevelShare[tree] * buildPrice * priceGrowth[tree] ^ (level - 1))
+function core.levelPrice(buildPrice : number, kind : string, tree : string, level : integer) : integer
+	local factor = kindPriceFactor[kind] and kindPriceFactor[kind][tree] or 1
+	return round(factor * firstLevelShare[tree] * buildPrice * priceGrowth[tree] ^ (level - 1))
 end
 
 local copyTable = function(source : {any : any}) : {any : any}
@@ -258,7 +292,7 @@ function core.wrapUpdate(original : function(any, any) : any, kind : string, say
 		local result = original(captureParams, params)
 		if type(result) ~= "table" then return result end
 		local p = (type(params) == "table" and params or {}) as {string : any}
-		local values = core.read(p)
+		local values = core.readFor(p, kind)
 		if core.isZero(values) then return result end
 		local r = result as {string : any}
 		local hook = r.terminateConstructionHook
