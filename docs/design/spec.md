@@ -2,7 +2,7 @@
 
 ## In short
 
-Stations get levels, bought one at a time in the station's own window, the way [Depot Retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits) does it for depots. This is a draft: every number below is a starting point taken from Depot Retrofits, and the scope depends on the probes in [probe-plan.md](probe-plan.md). Levels are applied and shown (probes 1 and 2); buying them is built and not yet tested in game.
+Stations get levels, bought one at a time in the station's own window, the way [Depot Retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits) does it for depots. This is a draft: every number below is a starting point taken from Depot Retrofits, and the scope depends on the probes in [probe-plan.md](probe-plan.md). Levels are applied and shown (probes 1 and 2), and buying them has been tested in game on rail, road, tram, cargo and harbour stations (findings, test results). Not yet tested: an era swap or catenary change on a levelled station, a vehicle at a platform during a rebuild, and loading a save with levelled stations.
 
 The planned first version has three trees of 15 levels each (catchment radius, pollution, noise), plus an upkeep tree. Harbours get only the catchment and upkeep trees: a port emits no pollution or noise of its own (findings, 2026-11-05). Waiting capacity is not a tree: players already add it by building more station modules, and mods with larger stops or modules cover the rest. It covers the base modular stations (rail, road and tram terminals, harbours) and later stations from other mods that have the same shape. A tree's highest level is the company's claimed rank. A level is applied by rebuilding the station with new hidden params, as for depots.
 
@@ -30,6 +30,8 @@ The two kinds of tree carry over from Depot Retrofits: three trees improve the s
 | Noise | `metadata.emissions`, both states | −5% | −75% |
 | Upkeep | the station's total upkeep, modules included | −5% of the total | −75% |
 
+Pollution and noise are not offered on harbours (note below); every other kind has all four trees.
+
 Notes:
 
 - **Harbours have two trees.** The card, the game script and the wrapper leave out pollution and noise for a harbour (`core.noTrees`). Every harbour's station emitter read 0 before its first level, and in the game's pollution and noise overlays a port and its wharves show no halo of their own, also after the port was expanded (findings, 2026-11-05). A level stored for either tree on a harbour is read as 0, so it has no effect and is not priced.
@@ -48,19 +50,20 @@ Notes:
 | Pollution | 0.04 | 1.10 | 0.54 | 1.27 |
 | Noise | 0.08 | 1.12 | 1.18 | 2.98 |
 | Upkeep | 0.16 | 1.15 | 2.69 | 7.61 |
+| Upkeep, harbours | 0.08 | 1.15 | 1.35 | 3.81 |
 
-  Catchment is the dearest, as it brings in more town (passengers and cargo). Pollution and noise are cheap and rise slowly: stations are only part of a town's pollution, so pollution 9 on all 16 stations of a town cut its pollution by about 11% (findings, test results). The upkeep tree is priced to pay for itself: on a station with the other three trees full (5.5 × the base upkeep), the full tree costs 45.7 × the base upkeep and saves 4.1 × a year, about 11 years (level 1 in 3.5 years, level 15 in 25). On a station with no other levels it saves only 0.75 × a year. Depot Retrofits keeps its own shares (0.15, 0.08, 0.12, 0.25) and one step of 1.15.
+  Catchment is the dearest, as it brings in more town (passengers and cargo). Pollution and noise are cheap and rise slowly: stations are only part of a town's pollution, so pollution 9 on all 16 stations of a town cut its pollution by about 11% (findings, test results). The upkeep tree is priced to pay for itself: on a station with the other three trees full (5.5 × the base upkeep), the full tree costs 45.7 × the base upkeep and saves 4.1 × a year, about 11 years (level 1 in 3.5 years, level 15 in 25). On a station with no other levels it saves only 0.75 × a year. The harbour row is the upkeep row at half price (see "A harbour's upkeep tree costs half" below). Depot Retrofits keeps its own shares (0.15, 0.08, 0.12, 0.25) and one step of 1.15.
 - **Upkeep.** Each improving level adds a share of the base upkeep: 15% catchment, 10% noise, 5% pollution. The upkeep tree multiplies the total by (1 − 0.05 × levels).
-- **Payback of the upkeep tree on a harbour is longer.** A harbour has no pollution or noise level to add upkeep, so at most its catchment (15% a level) raises the total, to 3.25 × the base upkeep at level 15, where a rail or road station with all three trees full is at 5.5 ×. The tree's price is the same (45.7 × the base upkeep for all 15 levels), so it pays back more slowly (a level saves 5% of the total a year, and costs 0.96 × the base upkeep at level 1, up to 6.8 × at level 15):
+- **A harbour's upkeep tree costs half.** A harbour has no pollution or noise level to add upkeep, so at most its catchment (15% a level) raises the total, to 3.25 × the base upkeep at level 15, where a rail or road station with all three trees full is at 5.5 ×. At the other stations' price (45.7 × the base upkeep for all 15 levels) it would pay back far more slowly, since a level saves only 5% of the total a year, so every level of a harbour's upkeep tree costs 0.5 × the table's price (22.8 × the base upkeep for all 15; 0.48 × at level 1, 3.4 × at level 15). Payback with that price:
 
 | Harbour's catchment | Upkeep level 1 | Upkeep level 15 | All 15 levels |
 |---|---|---|---|
-| 0 (no levels) | 19 years | 136 years | 61 years |
-| 8 (about half) | 9 years | 62 years | 28 years |
-| 15 (full) | 6 years | 42 years | 19 years |
+| 0 (no levels) | 9.6 years | 68 years | 30 years |
+| 8 (about half) | 4.4 years | 31 years | 14 years |
+| 15 (full) | 2.9 years | 21 years | 9.4 years |
 | *Rail or road station, all three trees full (for comparison)* | *3.5 years* | *25 years* | *11 years* |
 
-  What a harbour's levels buy is the range (catchment) and the upkeep cut, nothing else, so on a port the upkeep tree is the weaker buy. Left as it is for now (the same shares and steps as the other stations); lowering its share for harbours would bring the payback back toward 11 years, at the cost of a second price table. The catchment tree has no payback figure: what a larger circle earns depends on the town.
+  What a harbour's levels buy is the range (catchment) and the upkeep cut, nothing else. With catchment full the half price pays back a little faster than on other stations (9.4 years against 11); with no catchment levels it takes 30 years. The catchment tree has no payback figure: what a larger circle earns depends on the town.
 - **How upkeep is applied.** After the hook, the script's `maintenanceCost` already holds the modules' upkeep, and the game charges what the script leaves there; the wrapper multiplies it by the upkeep factor (probe 1).
 - **Modules added later.** As in Depot Retrofits, levels are not repriced when the station grows; the upkeep the levels add follows the modules. Big stations pay big prices, since the build price grows with the modules.
 
@@ -73,7 +76,7 @@ Notes:
 - A click sends the buy; the game script checks it again (level not stale, within the rank, enough money), rebuilds the station and books the price once the rebuild has landed, as station construction under the station's carrier (rail RAIL, harbour WATER, road station ROAD, or TRAM with tram tracks). A rebuild that never lands costs nothing. The price shows in the Finances tab under Investments, Infrastructure.
 - When the game refuses the rebuild (the clicked tree has not gone up about 10 seconds after the click: harbours take up to 3 seconds to build, and a busy game can take 3 more to take up the buy), the card shows the yellow "Not rebuilt" banner above its rows until a level lands: "Not rebuilt: a building, road or track is in the way. Nothing was charged. Clear it and buy again." Depot Retrofits also shows what is in the way with the game's proposal viewer; the station window gives its cards no place for it (findings), so that is left for later.
 - A buy the game script refuses never reaches the game, so the card would take it for a refused rebuild. The card sends a click number with each buy; the game script keeps each refusal (station, click, reason) in its state, one per station, and the card reads that state while a click waits (`getEntityForGameScript`, as `company_rank.tl`'s fallback does). A buy refused for money (the balance can fall by hundreds of thousands between the card's last read and the check, and come back within seconds) shows a yellow note with the base dollar notification icon instead, until the next click, a new level, or once it has shown for about 10 seconds and the balance covers the clicked level again (checked on each of the card's steps; still short of money, it stays): "Not bought: not enough money at the time of the buy. Nothing was charged." Other script refusals (rank, stale level) show nothing. Seen in game on a harbour (findings, test results); a card that cannot read the state logs `card scriptStateError` once and falls back to "Not rebuilt".
-- What a rebuild does to waiting passengers and cargo and to vehicles at the platforms is unknown (probe 1). If it loses the waiting passengers or cargo, say so on the card.
+- A rebuild keeps the waiting passengers (102 of 144 at a terminal stayed through six rebuilds; findings, 2026-11-05). What it does to waiting cargo and to vehicles at the platforms is unknown (probe 1). If it loses waiting cargo, say so on the card.
 
 ## Rank gate
 
@@ -82,14 +85,13 @@ As in Depot Retrofits: a tree's maximum level is the claimed company rank; no le
 ## Decisions
 
 - A separate mod, not part of Depot Retrofits: own listing, own balance, a failure in one does not break the other.
-- Name "Station Retrofits", folder `station_retrofits_1`, log prefix `STATION_RETROFITS` (mod.io still to be checked for a clash).
+- Name "Station Retrofits", folder `station_retrofits_1`, log prefix `STATION_RETROFITS` (mod.io checked 2026-11-01: no clash).
 - Catchment is in: +3% per level, at least +5 m, first-level share 0.20.
 - Waiting capacity is out: more station modules, or mods with larger stops or modules, already add it.
-- Harbours get the catchment and upkeep trees only (their emitter reads 0 and the overlays show no pollution or noise at a port); their upkeep tree pays back in about 19 years with full catchment, against 11 on other stations, and is left at the same price.
+- Harbours get the catchment and upkeep trees only (their emitter reads 0 and the overlays show no pollution or noise at a port); their upkeep tree costs half (`core.levelPrice`, a per-kind factor), which pays back in about 9.4 years with full catchment and 30 with none, against 11 on other stations.
 - Kerbside bus and tram stops are out of scope for this mod (decided 2026-11-05).
 - Prices (after the pollution test): pollution 0.04 with a step of 1.10, noise 0.08 with 1.12, upkeep 0.16 so that a fully levelled station's upkeep tree pays back in about 11 years; catchment unchanged. Pollution and noise levels still add 5% and 10% of the base upkeep.
 
 ## Open decisions (for the user)
 
-1. Whether a harbour's upkeep tree should be cheaper, so that it pays back as fast as on other stations (about 11 years against 19). Today it is not.
-2. Whether to look for what a port does emit (its ships' own pollution and noise are vehicle emissions, which no tree touches) and give harbours those levels.
+1. Whether to look for what a port does emit (its ships' own pollution and noise are vehicle emissions, which no tree touches) and give harbours those levels.

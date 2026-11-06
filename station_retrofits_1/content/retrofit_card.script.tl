@@ -354,7 +354,7 @@ local readAffordable = function(entry : Entry, balance : number) : string
 	local marks : {string} = {}
 	for _, tree in ipairs(core.treesOf(entry.kind)) do
 		local level = entry.levels[tree]
-		entry.affordable[tree] = level >= core.maxLevel or balance >= core.levelPrice(entry.buildPrice, tree, level + 1)
+		entry.affordable[tree] = level >= core.maxLevel or balance >= core.levelPrice(entry.buildPrice, entry.kind, tree, level + 1)
 		marks[#marks + 1] = entry.affordable[tree] and "y" or "n"
 	end
 	return table.concat(marks)
@@ -615,7 +615,7 @@ local buyButton = function(s : CardState, entry : Entry, tree : string) : TreeNo
 	local nextLevel = level + 1
 	local label, tooltip : string, string
 	local enabled = false
-	local price = entry.buildPrice and core.levelPrice(entry.buildPrice, tree, nextLevel) or nil
+	local price = entry.buildPrice and core.levelPrice(entry.buildPrice, entry.kind, tree, nextLevel) or nil
 	if price == nil then
 		label, tooltip = "?", "Price unknown"
 	elseif tree == "catchment" and entry.radius == nil then
@@ -730,7 +730,7 @@ local logShown = function(group : Engine.Entity, s : CardState)
 		local list : {string} = {}
 		for _, tree in ipairs(core.treesOf(entry.kind)) do
 			local level = entry.levels[tree]
-			list[#list + 1] = level < core.maxLevel and entry.buildPrice and tostring(core.levelPrice(entry.buildPrice, tree, level + 1)) or "-"
+			list[#list + 1] = level < core.maxLevel and entry.buildPrice and tostring(core.levelPrice(entry.buildPrice, entry.kind, tree, level + 1)) or "-"
 		end
 		prices[#prices + 1] = tostring(entry.construction) .. ":" .. table.concat(list, "/")
 	end

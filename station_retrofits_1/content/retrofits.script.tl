@@ -299,7 +299,7 @@ local processBuy = function(retrofit : RetrofitState, buy : Buy, t : number) : s
 	if buy.from + 1 > rank then return "rank rank=" .. tostring(rank) end
 	local charged = chargedUpkeepOf(con)
 	if charged == nil then return "noUpkeep" end
-	local price = core.levelPrice(core.buildPrice(charged, from), buy.tree, buy.from + 1)
+	local price = core.levelPrice(core.buildPrice(charged, from), kind, buy.tree, buy.from + 1)
 	local balance = balanceOf()
 	if balance ~= nil and balance < price then return "noMoney balance=" .. tostring(balance) .. " price=" .. tostring(price) end
 

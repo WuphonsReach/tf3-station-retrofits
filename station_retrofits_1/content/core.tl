@@ -55,6 +55,9 @@ local upkeepStep = 0.05
 -- itself in about 11 years.
 local firstLevelShare : {string : number} = { catchment = 0.20, pollution = 0.04, noise = 0.08, upkeep = 0.16 }
 local priceGrowth : {string : number} = { catchment = 1.15, pollution = 1.10, noise = 1.12, upkeep = 1.15 }
+-- A kind's level prices are this much of the table's for a tree: a harbour has no pollution or noise level to add upkeep, so
+-- its upkeep tree saves less and costs half (spec, "Price and upkeep").
+local kindPriceFactor : {string : {string : number}} = { harbour = { upkeep = 0.5 } }
 local buildPricePerUpkeep = 6 -- 80 of the 81 base station modules cost 6 times their yearly upkeep to build
 core.upkeepShares = upkeepPerLevel
 core.upkeepStep = upkeepStep
@@ -161,8 +164,9 @@ function core.buildPrice(chargedUpkeep : number, values : {string : integer}) : 
 	return 100 * round(buildPricePerUpkeep * chargedUpkeep / core.upkeepFactor(values) / 100)
 end
 
-function core.levelPrice(buildPrice : number, tree : string, level : integer) : integer
-	return round(firstLevelShare[tree] * buildPrice * priceGrowth[tree] ^ (level - 1))
+function core.levelPrice(buildPrice : number, kind : string, tree : string, level : integer) : integer
+	local factor = kindPriceFactor[kind] and kindPriceFactor[kind][tree] or 1
+	return round(factor * firstLevelShare[tree] * buildPrice * priceGrowth[tree] ^ (level - 1))
 end
 
 local copyTable = function(source : {any : any}) : {any : any}
