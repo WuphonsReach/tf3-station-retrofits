@@ -2,49 +2,34 @@
 
 ## In short
 
-- **Where it stands.** Probes 1 and 2 work in game: levels applied by a rebuild, all values as the formulas say for 30 days, and a Retrofit card in the station window showing them. Buying a level from the card is built (game script, buy buttons, "Not rebuilt" banner) and not yet tested. Configure (the station's module editor) keeps the bought levels on road and tram stations, and module edits on a cargo rail station kept them; era swaps and catenary are not tested yet. Harbours get only the catchment and upkeep trees (a port emits no pollution or noise). Kerbside stops are out of scope.
-- **Next.** Test buying in game (below), then the rest of probe 3 (era swap, catenary) with bought levels, in one session with the probe 1 and 2 leftovers (results so far in [docs/design/findings.md](docs/design/findings.md)). Decisions so far are in [docs/design/spec.md](docs/design/spec.md), "Decisions".
+- **Where it stands.** Levels, the Retrofit card and buying all work in game: 130-odd buys on rail, road, tram, cargo and harbour stations, charged to the dollar, prices as the formulas say (results in [docs/design/findings.md](docs/design/findings.md)). Configure (the station's module editor) keeps the levels on road, tram and cargo rail stations. Harbours get only the catchment and upkeep trees (a port emits no pollution or noise), and their upkeep tree costs half. Kerbside stops are out of scope. Decisions are in [docs/design/spec.md](docs/design/spec.md), "Decisions".
+- **Next.** One in-game session for what is untested: an era swap and catenary on a levelled station, a vehicle at a platform during a rebuild, loading a levelled save, and the levels with the most used competing mods active. Then the code-review fixes below, then the user guide, listing and release.
 
-## Set-up
+## Done
 
-- [x] mod.io name check: no Station Retrofits or close name (in-game Mod Hub and mod.io, 2026-11-01).
-- [x] Mod scaffolding, copied from Depot Retrofits and renamed: `mod.json`, `_metadata/modinfo.json` (draft text), `_content.json`, `content/settings.tl`, and a `content/mod.script.tl` that only logs its start-up line.
-- [ ] `types/station_retrofits.d.tl` and the require in `all_def.tl`: with `levels.tl`, when there is something to type.
-- [x] Tools and CI, copied and adapted: `tools/check_content_list.py`, `tools/check_repo.py`, `.github/workflows/checks.yml` (checkout v7.0.1 and setup-python v7.1.0, still the latest releases on 2026-11-01).
-- [x] `tlconfig.lua` filled in on this machine; `tl check` passes.
-- [x] Symlink `station_retrofits_1/` into the game's `staging_area/`.
-- [x] GitHub repo, public, MIT, settings and rulesets as Depot Retrofits: `main`, `pr-checks`, `trunks`, `version-tags`.
+- Name check, scaffolding, tools and CI, `tlconfig.lua`, staging symlink, GitHub repo and rulesets (2026-11-01).
+- Probes 1 and 2 (levels applied by a rebuild; the card in the station window through the plugin extension point). Probe 4 dropped, kerbside stops are out of scope.
+- Buying from the card: prices in `core.tl`, the game script `retrofits.script.tl`, buy buttons, the "Not bought" note (money) and the "Not rebuilt" banner.
+- Prices lowered after the pollution test; harbours without pollution and noise trees and with a half-price upkeep tree, seen in game on seven ports with prices matching the formula on five (findings, 2026-11-05).
+- The emitter refills after a rebuild; how fast does not matter.
+- Desk checks: `STATION` as the journal construction; no base station `.con` sets `constructionType`; the rail and street `upgradeFn` keep the other params; how the station window shows catchment and capacity; 13 competing mods read (notes in `local/competitors.md`).
+- Waiting passengers survive rebuilds (findings, 2026-11-05).
 
-## Probes ([docs/design/probe-plan.md](docs/design/probe-plan.md))
+## To test in game
 
-- [x] Probe 1: rebuild 3 stations with fixed levels (findings, test results): wrapper, ids, cost, upkeep, catchment, capacity, emissions all as the formulas say.
-- [ ] Probe 1 leftovers: a vehicle at a platform during a rebuild. Done: waiting passengers survive rebuilds (102 / 144 at Holbeach through six buys, 12 and 24 of 144 at Peterlee South-Central through 35; findings, 2026-11-05), waiting cargo not seen; save and load of a levelled station (load `WR26A Giga-Tv3 1915 1101-1303-test`). Done: 30 days, the beam beside the circle centres.
-- [x] Probe 2: Retrofit card in the station window (plugin extension point, not `entityWindowScript`), base window unchanged. Left: a station placed in session, a group of two constructions, next to another mod's card.
-- [ ] Probe 3: module edits, era swaps and catenary keep the levels. Done: Configure on two road stations, platforms and a module added; a cargo rail station with modules added, removed and moved; a tram terminal (findings, test results). Left: an era swap, catenary.
-- [x] Probe 4: dropped, kerbside stops are out of scope (2026-11-05).
-- [ ] Record each probe's results in [docs/design/findings.md](docs/design/findings.md) (In short first, test results at the bottom).
+- [ ] Probe 3 rest: an era swap and catenary keep the levels. Done: Configure on road and tram stations, cargo rail module add, remove and move.
+- [ ] Probe 1 rest: a vehicle at a platform during a rebuild; waiting cargo; save and load of a levelled station (save `WR26A Giga-Tv3 1915 1101-1303-test`).
+- [ ] Probe 2 rest: a station placed in session, a group of two constructions, next to another mod's card.
+- [ ] The levels with the most used competing mods active.
+- [ ] Buying: a harbour that lands slower than a game day at 4x (the game script waits 30 real seconds); a refused rebuild shows the banner and charges nothing; buying while the game runs.
 
-## Desk checks (no game needed)
+## Still to do
 
-- [x] Which `JournalEntry.Construction` value suits a station charge: `STATION` (`scripts/journal.d.tl`); still to see in the Finances tab.
-- [x] Whether base station `.con` files set `constructionType`: none of the 14 does (findings, 2026-11-05).
-- [x] Whether the rail and street `upgradeFn` return the other params unchanged: both do (findings, 2026-11-05). Left to see in game: an era swap and catenary (probe 3).
-- [x] How the station window shows catchment and capacity: a Waiting Hall row and terminal rows with waiting / capacity (passenger terminals only), the upkeep footer; no catchment figure (findings, test results). The card need not repeat them.
-- [x] Survey the mods that change the same values or the station window: 13 mods read (notes in `local/competitors.md`, lessons in [docs/design/findings.md](docs/design/findings.md), "Seen in other mods' code").
-- [ ] Test the levels with the most used of them active (after probe 1).
-- [ ] Survey the stations of the user's subscribed mods (mod.io folder in `local/machine.md`): does each return a `station` table, use `terminateConstructionHook`, set `constructionType`? Note licences: read-only for anything not MIT/BSD/Apache/CC0.
-
-## After the probes
-
-- [ ] Fix the spec: trees, shares, scope (airports, underground station), the upkeep tree. Kerbside stops are out.
-- [x] Buying, from Depot Retrofits' 1.2 code: prices in `core.tl`, the game script `retrofits.script.tl` (buy queue, checks, rebuild, charge on landing), buy buttons and the "Not rebuilt" banner in the card. The probe 1 game script is retired (git history).
-- [ ] Test buying in game. Done on a rail station (11 buys, all four trees): prices, charges, upkeep and catchment as the card showed (findings, test results). Then 70 buys on six stations (rail, road with tram, cargo rail, cargo road, harbour): charges under Investments, Infrastructure, to the dollar; the three-part rows fit; "Rank 14" greyed at rank 13. 132 buys at 1.5x to 4x on 13 stations, harbours included, all charged once (findings, 2026-11-03). Left: a harbour that lands slower than a game day at 4x (the game script now waits 30 real seconds); harbour buys with the longer waits (no flash); greyed for money; a refused rebuild shows the banner and charges nothing; buying while the game runs.
-- [x] Prices lowered after the pollution test (spec, "Price and upkeep"). Seen in game: Thornwick's first pollution level $12,300 on a $307,500 build price (findings, 2026-11-05).
-- [x] Harbours: no pollution or noise trees (card rows, game script refusal `noTree`, wrapper), after the overlays showed no emission at a port (findings, 2026-11-05; spec). Not yet seen in game. A harbour's upkeep tree costs half (spec); not yet seen in game.
-- [ ] Read a tram station's emitter a game day after a buy (290199 stayed 0 / 0 for 30 seconds; 390832 refilled within a second): add a delayed read to the `full` log.
-- [x] "Not bought" note for buys refused for money (spec), from Depot Retrofits' fix for the same case. Seen in game on a harbour (findings, test results); before it, two such buys on a tram station showed "Not rebuilt".
+- [ ] Survey the stations of the user's subscribed mods (mod.io folder in `local/machine.md`): does each return a `station` table, use `terminateConstructionHook`, set `constructionType`? Read-only for anything not MIT/BSD/Apache/CC0.
+- [ ] Spec: scope for airports and the underground station; whether to look for what a port does emit.
+- [ ] `types/station_retrofits.d.tl` and the require in `all_def.tl`.
 - [ ] "Not rebuilt": show what is in the way (the proposal viewer needs an action area the station window does not give its cards; findings).
-- [ ] User guide, listing text, cover and gallery, release process (`docs/publishing.md` from Depot Retrofits).
+- [ ] User guide, listing text, cover and gallery (collected screenshots in `local/screenshots/`), release process (`docs/publishing.md` from Depot Retrofits).
 
 ## From the code review (2026-11-03)
 
