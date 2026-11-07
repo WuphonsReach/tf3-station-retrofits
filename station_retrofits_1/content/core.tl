@@ -177,6 +177,14 @@ function core.runPrice(buildPrice : number, kind : string, tree : string, from :
 	return total
 end
 
+-- Removing a level refunds this share of its price at today's build price, what buying it back now would cost (spec,
+-- "Removing a level"). Nothing records what a level cost or when it was bought.
+core.refundShare = 0.8
+
+function core.refund(buildPrice : number, kind : string, tree : string, level : integer) : integer
+	return round(core.refundShare * core.levelPrice(buildPrice, kind, tree, level))
+end
+
 local copyTable = function(source : {any : any}) : {any : any}
 	local copy : {any : any} = {}
 	for key, value in pairs(source) do copy[key] = value end

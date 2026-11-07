@@ -41,6 +41,9 @@ global record StationRetrofitsCore
 	buildPrice : function(chargedUpkeep : number, levels : {string : integer}) : number
 	levelPrice : function(buildPrice : number, kind : string, tree : string, level : integer) : integer
 	runPrice : function(buildPrice : number, kind : string, tree : string, from : integer, to : integer) : integer
+	-- What removing a level gives back: refundShare (0.8) of its price at this build price.
+	refundShare : number
+	refund : function(buildPrice : number, kind : string, tree : string, level : integer) : integer
 	-- The share of the base upkeep each level of a tree adds (no entry for the upkeep tree), and the share of the total each
 	-- upkeep level cuts.
 	upkeepShares : {string : number}
