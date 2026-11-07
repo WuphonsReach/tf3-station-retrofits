@@ -309,3 +309,12 @@ Save `WR26A Giga-Tv3 1917 1104-2359` (Jan to Apr 1917, rank 13), logLevel `"full
 - **Kerbside stop.** George Street (a tram stop) has no card, as expected: kerbside stops are out of scope.
 - **Prices lowered after the pollution test** (spec): seen in game, for example Thornwick's first pollution level $12,300 on a $307,500 build price (share 0.04).
 - **Ports in game, 2026-11-05 evening** (seven ports, shots of the same session): the card shows only the catchment and upkeep rows. The upkeep tree costs half: with the build price taken from each port's catchment price (0.20 × build price × 1.15^(level−1)), the upkeep price is 0.08 × build price × 1.15^(level−1) to the dollar on Normanton Port ($825,799 and $287,235), Peterlee Refinery North Port ($237,140 and $441,307), Refinery West Port ($227,840 and $424,000), Oakheart Port ($455,489 and $182,195) and Wigton Port ($531,413 and $212,565). Normanton's footer ($196,000/Year at catchment level 11, upkeep level 10) gives a build price of $887,500, as the catchment price did.
+
+### 2026-11-07: a buy clicked as an autosave started
+
+Save `WR26A Giga-Tv3 1919 1107-0627` (May 1919, rank 13), logLevel `"full"`. Log: `local/logs/stdout-20261107-115220.txt` (11:37 to 11:52 UTC). Not a planned test: the autosave fell in the middle of a run of buys.
+
+- **The click waited out the save.** Street terminal 422978 (levels 6/0/0/0): `card buy … from=6 shownPrice=72861` at 11:49:17; the autosave started in the same second and took 3.7 seconds (11:49:17 to 11:49:21). The game script, which runs on the thread that saves, queued the buy at 11:49:21, right after `Saving game complete`, then sent the rebuild, and it landed and was charged once at the shown price (levels 7/0/0/0, radius 206.5 to 211.8 m). The card refreshed, and the next buys (pollution 1, catchment 8 to 11) went through as usual.
+- **The autosave holds the state from before the click:** 6/0/0/0 on 422978, paid for 6 levels, and no buy half done. It also holds levels on street terminal 433784 (catchment 12, bought at 11:49:09), so it can serve for the open "load a levelled save" test.
+- **The 30-second wait was not used.** It starts at `buy sent`, after the save here. Not covered: a save that starts between `buy sent` and the rebuild landing; that buy would be given up only if the save took over 30 seconds (this 266 MB save took 3.7).
+- No `Error while loading game script`; the only errors are the base game's `ProposalData error: Collision` lines.
