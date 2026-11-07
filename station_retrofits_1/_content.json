@@ -9,6 +9,7 @@
         "retrofit_card.script.tl",
         "retrofits.gs.lua",
         "retrofits.script.tl",
-        "settings.tl"
+        "settings.tl",
+        "station_original.script.lua"
     ]
 }
