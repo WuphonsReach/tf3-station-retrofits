@@ -123,6 +123,7 @@ From a read-only survey of the station, catchment, capacity and emission script 
 11. How stations from popular mods are shaped (whether they return a `station` table, use `terminateConstructionHook`, set `constructionType`).
 12. Whether the levels stack with other mods that change the same values. Read from their code (next section): they do if we wrap through `loadScript` and multiply the values we find; untested in game.
 13. Where a harbour's pollution and noise are emitted: nowhere that the station reaches. Both harbours in the pollution test, Nürnberg Hafen, and (2026-11-05) another port read 0 / 0 on the station entity's emitter, though the scaled `metadata.emissions` hold 34 / 210 and 68 / 420, and the overlays show no pollution or noise at a port. Harbours therefore get no pollution or noise trees. Not known: whether a ship loading at the quay adds anything to the station; the shots show none (ships emit as vehicles). A different source of the 34 / 210 figures is not found.
+14. Whether the levels reach street stations and harbours while TRM: Industry Emissions is active with "Transport Building Emissions" at "Rebalanced". Its `loadConstruction` wrapper loads the base script with its own `ug_require` and the global `data()`, not `util.useFn`, so our `loadScript` wrapper may be skipped there; if so, a buy would charge and change nothing. Rail stations are not affected. Details in [docs/compatibility.md](../compatibility.md).
 
 ## Test results
 
