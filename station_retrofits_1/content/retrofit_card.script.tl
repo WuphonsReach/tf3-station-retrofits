@@ -25,6 +25,7 @@ local record Entry
 	upkeep : number -- the upkeep the game charges now (the window's footer); nil when unreadable
 	buildPrice : number -- nil when the upkeep is unreadable
 	affordable : {string : boolean} -- per tree, whether the balance covers the next level; nil when unreadable
+	reach : {string : integer} -- per tree, the highest level the rank allows and the balance covers in one buy; nil when unreadable
 	refused : boolean -- true when the game did not rebuild the station for its last buy (see readRefused)
 	short : boolean -- true when the game script refused the station's last buy for want of money; nil otherwise
 end
@@ -348,14 +349,25 @@ end
 
 -- Per tree whether the balance covers the next level, as "yynn" for the card's key; kept as yes or no, not the balance itself,
 -- so the card redraws only when one of them changes.
-local readAffordable = function(entry : Entry, balance : number) : string
+local readAffordable = function(entry : Entry, balance : number, rank : integer) : string
 	if balance == nil or entry.buildPrice == nil then return "?" end
 	entry.affordable = {}
+	entry.reach = {}
 	local marks : {string} = {}
 	for _, tree in ipairs(core.treesOf(entry.kind)) do
 		local level = entry.levels[tree]
 		entry.affordable[tree] = level >= core.maxLevel or balance >= core.levelPrice(entry.buildPrice, entry.kind, tree, level + 1)
 		marks[#marks + 1] = entry.affordable[tree] and "y" or "n"
+		-- The most levels in one buy: as far as the rank allows and the balance pays for.
+		local reach = level
+		local spent = 0
+		for n = level + 1, math.min(rank or 0, core.maxLevel) do
+			spent = spent + core.levelPrice(entry.buildPrice, entry.kind, tree, n)
+			if spent > balance then break end
+			reach = n
+		end
+		entry.reach[tree] = reach
+		marks[#marks + 1] = tostring(reach)
 	end
 	return table.concat(marks)
 end
@@ -369,7 +381,7 @@ local readCard = function(group : Engine.Entity) : CardState
 		readValues(entry)
 		local okRefused, wasRefused = pcall(readRefused, entry.construction, entry.levels)
 		entry.refused = okRefused and wasRefused or nil
-		local afford = readAffordable(entry, okBalance and tonumber(balance) or nil)
+		local afford = readAffordable(entry, okBalance and tonumber(balance) or nil, s.rank)
 		local okShort, isShort = pcall(readShort, entry)
 		entry.short = okShort and isShort or nil
 		parts[#parts + 1] = tostring(entry.construction) .. ":" .. entry.kind .. ":" .. core.describe(entry.levels)
@@ -610,6 +622,46 @@ end
 -- with the new level. A second click before that is ignored (tries), and the game script refuses a stale level, so nothing
 -- is charged twice. A rebuild the game refuses shows as the yellow banner about ten seconds later (readRefused); the buttons
 -- stay, so the buy can be sent again.
+local sendBuy = function(construction : Engine.Entity, tree : string, level : integer, target : integer, price : integer)
+	-- One buy at a time per station: a second click before the first lands or is refused is ignored.
+	if tries[construction] ~= nil then return end
+	local now, isClock = clockNow()
+	-- Numbered from the clock too, so a refusal kept in the save from an earlier session does not match a new click.
+	clicks = clicks + 1
+	local click = isClock and (math.floor(now) % 100000) * 100 + clicks % 100 or clicks
+	tries[construction] = { tree = tree, from = level, at = now, step = stepCount, click = click }
+	short[construction] = nil
+	if logFull then
+		say("card buy construction=" .. tostring(construction) .. " tree=" .. tree .. " from=" .. tostring(level)
+			.. " to=" .. tostring(target) .. " shownPrice=" .. tostring(price) .. " click=" .. tostring(click))
+	end
+	api.cmd.sendCommand(api.cmd.makeScriptingSendEventCmd("", buyEventId, buyEvent,
+		{ construction = construction, tree = tree, from = level, to = target, click = click }))
+end
+
+-- The ">|" button beside the buy button: buys every level the rank allows and the balance pays for in one rebuild, for the
+-- sum of their prices (what clicking them one by one costs). Short of the rank's limit for want of money, it buys as far as
+-- the money goes. The levels and the price are in the tooltip, as the row has no room for them. Greyed unless it would buy
+-- at least two levels (the single button covers one); the game shows no tooltip on a greyed button.
+local maxButton = function(entry : Entry, tree : string) : TreeNodeId
+	local level = entry.levels[tree]
+	local target = entry.reach ~= nil and entry.reach[tree] or level
+	local enabled = entry.buildPrice ~= nil and target >= level + 2 and not (tree == "catchment" and entry.radius == nil)
+	local price = enabled and core.runPrice(entry.buildPrice, entry.kind, tree, level, target) or nil
+	local tooltip = enabled and ("Buy levels " .. tostring(level + 1) .. " to " .. tostring(target) .. " for " .. money(price) .. ".")
+		or nil
+	local construction = entry.construction
+	return builtin.Button{
+		meta = { class = "primary, station-retrofits-max", enabled = enabled, tooltip = tooltip,
+			localKey = "station_retrofits_max_" .. tostring(construction) .. "_" .. tree },
+		content = text(">|"),
+		onClick = function()
+			if not enabled then return end
+			sendBuy(construction, tree, level, target, price)
+		end,
+	}
+end
+
 local buyButton = function(s : CardState, entry : Entry, tree : string) : TreeNodeId
 	local level = entry.levels[tree]
 	local nextLevel = level + 1
@@ -643,20 +695,7 @@ local buyButton = function(s : CardState, entry : Entry, tree : string) : TreeNo
 		} },
 		onClick = function()
 			if not enabled then return end
-			-- One buy at a time per station: a second click before the first lands or is refused is ignored.
-			if tries[construction] ~= nil then return end
-			local now, isClock = clockNow()
-			-- Numbered from the clock too, so a refusal kept in the save from an earlier session does not match a new click.
-			clicks = clicks + 1
-			local click = isClock and (math.floor(now) % 100000) * 100 + clicks % 100 or clicks
-			tries[construction] = { tree = tree, from = level, at = now, step = stepCount, click = click }
-			short[construction] = nil
-			if logFull then
-				say("card buy construction=" .. tostring(construction) .. " tree=" .. tree .. " from=" .. tostring(level)
-					.. " shownPrice=" .. tostring(price) .. " click=" .. tostring(click))
-			end
-			api.cmd.sendCommand(api.cmd.makeScriptingSendEventCmd("", buyEventId, buyEvent,
-				{ construction = construction, tree = tree, from = level, click = click }))
+			sendBuy(construction, tree, level, nextLevel, price)
 		end,
 	}
 end
@@ -710,6 +749,8 @@ local nextRows = function(s : CardState) : {TreeNodeId}
 				local right : {TreeNodeId} = { upkeep }
 				if styles ~= nil then right[#right + 1] = builtin.Component{ meta = { styleSheet = styles.buttonGap } } end
 				right[#right + 1] = buyButton(s, entry, tree)
+				if styles ~= nil then right[#right + 1] = builtin.Component{ meta = { styleSheet = styles.buttonGap } } end
+				right[#right + 1] = maxButton(entry, tree)
 				rows[#rows + 1] = row({ icon(treeIcons[tree]), text(" " .. effectNext(entry, tree, nextLevel)) },
 					builtin.BoxLayout{ orientation = builtin.type.Orientation.Horizontal, children = right },
 					tooltip)

@@ -11,6 +11,8 @@ function data()
 	-- them line up from row to row. A minimum, not a fixed width: a longer label (a larger font setting, a dearer level)
 	-- widens its button instead of being cut off. Measured in game: "$5,380,247" took about 105 of the window's 450 units.
 	a("Button!station-retrofits-buy", { minSize = { 120, -1 } })
+	-- The ">|" button beside it (buy every level the rank and the money allow), as small as its label.
+	a("Button!station-retrofits-max", { minSize = { 32, -1 } })
 
 	return result
 end

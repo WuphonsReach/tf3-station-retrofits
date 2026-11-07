@@ -21,6 +21,7 @@
 - [ ] Probe 1 rest: a vehicle at a platform during a rebuild; waiting cargo; save and load of a levelled station (save `WR26A Giga-Tv3 1915 1101-1303-test`).
 - [ ] Probe 2 rest: a station placed in session, a group of two constructions, next to another mod's card.
 - [ ] The levels with the most used competing mods active.
+- [ ] The ">|" button: one rebuild for several levels on rail, road and harbour; the charge equals the sum of the single prices and the tooltip's price; a refused one shows the banner and charges nothing; the row still fits the card.
 - [ ] Buying: a harbour that lands slower than a game day at 4x (the game script waits 30 real seconds); a refused rebuild shows the banner and charges nothing; buying while the game runs.
 
 ## Still to do
@@ -30,6 +31,14 @@
 - [ ] `types/station_retrofits.d.tl` and the require in `all_def.tl`.
 - [ ] "Not rebuilt": show what is in the way (the proposal viewer needs an action area the station window does not give its cards; findings).
 - [ ] User guide, listing text, cover and gallery (collected screenshots in `local/screenshots/`), release process (`docs/publishing.md` from Depot Retrofits).
+
+- [ ] Downgrade: a "<" button per tree that removes the top level, one at a time, in one rebuild, and refunds 50% of that level's price at the station's current build price (harbours' half-price upkeep tree included through `core.levelPrice`). No rank or money check; the stored level must still be the one the card saw, and above 0. Before building:
+  - The game script's `landed` counts a rebuild as landed when the stored level is at least the target, which a downgrade's old level already is: the refund would be booked at once, even for a rebuild the game refuses. Pending buys need a direction, and a downgrade lands when the stored level is at most the target.
+  - The card's `readRefused` waits for the tree to go up, so every downgrade would show "Not rebuilt" after 10 seconds. `Try` needs the same direction.
+  - Place "<" at the left of the expanded row, away from the buy buttons: a misclick costs half the level. Its tooltip gives the refund and the upkeep after it.
+  - Adding modules after a buy raises the build price, so the refund grows with it; it passes what the level cost only if the build price more than doubles. Accepted; say so in the spec.
+  - Test how the Finances tab shows a refund (a positive station construction entry), and that a refused downgrade refunds nothing.
+  - Log `direction=down` and `refund=` on the queued, sent and charged lines.
 
 ## From the code review (2026-11-03)
 

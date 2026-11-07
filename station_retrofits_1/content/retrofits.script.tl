@@ -37,6 +37,7 @@ local record Buy
 	construction : Engine.Entity
 	tree : string
 	from : integer
+	to : integer -- the level to buy up to in one rebuild; nil (a card without it) means from + 1
 	click : integer -- the card's number for the click that sent it; nil from a card without one
 end
 
@@ -294,27 +295,29 @@ local processBuy = function(retrofit : RetrofitState, buy : Buy, t : number) : s
 	local from = core.readFor(params, kind)
 	if from[buy.tree] ~= buy.from then return "stale stored=" .. tostring(from[buy.tree]) end
 	if buy.from >= core.maxLevel then return "maxLevel" end
+	local target = buy.to or buy.from + 1
+	if target <= buy.from or target > core.maxLevel then return "badTarget to=" .. tostring(buy.to) end
 	local rank, _, rankSource = readRank()
 	if rank == nil then return "rankUnknown rankSource=" .. rankSource end
-	if buy.from + 1 > rank then return "rank rank=" .. tostring(rank) end
+	if target > rank then return "rank rank=" .. tostring(rank) end
 	local charged = chargedUpkeepOf(con)
 	if charged == nil then return "noUpkeep" end
-	local price = core.levelPrice(core.buildPrice(charged, from), kind, buy.tree, buy.from + 1)
+	local price = core.runPrice(core.buildPrice(charged, from), kind, buy.tree, buy.from, target)
 	local balance = balanceOf()
 	if balance ~= nil and balance < price then return "noMoney balance=" .. tostring(balance) .. " price=" .. tostring(price) end
 
-	local to = core.withLevel(from, buy.tree, buy.from + 1)
+	local to = core.withLevel(from, buy.tree, target)
 	local before = logFull and describeStation(buy.construction) or nil
 	local ran, result = sendRebuild(buy.construction, to)
 	if not ran then return "rebuild " .. result end
-	local label = buy.tree .. tostring(buy.from + 1)
+	local label = buy.tree .. tostring(target)
 	local carrier, carrierSource = carrierFor(kind, params)
 	say("buy sent construction=" .. tostring(buy.construction) .. " kind=" .. kind .. " tree=" .. buy.tree
-		.. " level=" .. tostring(buy.from + 1) .. " price=" .. tostring(price) .. " balanceBefore=" .. tostring(balance)
+		.. " level=" .. tostring(target) .. " levelsBought=" .. tostring(target - buy.from) .. " price=" .. tostring(price) .. " balanceBefore=" .. tostring(balance)
 		.. " rank=" .. tostring(rank) .. " rankSource=" .. rankSource .. " carrier=" .. carrier .. " carrierSource=" .. carrierSource
 		.. " from=" .. core.describe(from) .. " to=" .. core.describe(to) .. (before ~= nil and (" before " .. before) or ""))
 	replacePending(retrofit, buy.construction, t)
-	table.insert(retrofit.pending, { construction = buy.construction, tree = buy.tree, level = buy.from + 1,
+	table.insert(retrofit.pending, { construction = buy.construction, tree = buy.tree, level = target,
 		untilT = t + buyPendingClock, sentAt = clockNow(), price = price, carrier = carrier, label = label })
 	return nil
 end
@@ -402,6 +405,7 @@ local retrofitScript : GameScript<RetrofitState> = {
 			construction = math.floor(tonumber(p.construction) or -1) as Engine.Entity,
 			tree = tostring(p.tree),
 			from = math.floor(tonumber(p.from) or -1),
+			to = tonumber(p.to) and math.floor(tonumber(p.to)) or nil,
 			click = tonumber(p.click) and math.floor(tonumber(p.click)) or nil,
 		}
 		local retrofit = loadState(state)
@@ -410,7 +414,7 @@ local retrofitScript : GameScript<RetrofitState> = {
 		state:set(retrofit)
 		if logFull then
 			say("buy queued src=" .. tostring(src) .. " id=" .. tostring(id) .. " construction=" .. tostring(buy.construction)
-				.. " tree=" .. buy.tree .. " from=" .. tostring(buy.from) .. " click=" .. tostring(buy.click) .. " queued=" .. tostring(#retrofit.buys))
+				.. " tree=" .. buy.tree .. " from=" .. tostring(buy.from) .. " to=" .. tostring(buy.to) .. " click=" .. tostring(buy.click) .. " queued=" .. tostring(#retrofit.buys))
 		end
 	end,
 }

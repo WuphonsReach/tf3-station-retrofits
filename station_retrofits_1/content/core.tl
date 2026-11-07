@@ -169,6 +169,14 @@ function core.levelPrice(buildPrice : number, kind : string, tree : string, leve
 	return round(factor * firstLevelShare[tree] * buildPrice * priceGrowth[tree] ^ (level - 1))
 end
 
+-- The price of buying levels from + 1 up to to in one rebuild: the sum of their single prices, which is what buying them one
+-- by one costs, as the build price does not change with the levels.
+function core.runPrice(buildPrice : number, kind : string, tree : string, from : integer, to : integer) : integer
+	local total = 0
+	for level = from + 1, to do total = total + core.levelPrice(buildPrice, kind, tree, level) end
+	return total
+end
+
 local copyTable = function(source : {any : any}) : {any : any}
 	local copy : {any : any} = {}
 	for key, value in pairs(source) do copy[key] = value end
