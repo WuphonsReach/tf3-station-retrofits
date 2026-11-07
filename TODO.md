@@ -15,6 +15,18 @@
 - Desk checks: `STATION` as the journal construction; no base station `.con` sets `constructionType`; the rail and street `upgradeFn` keep the other params; how the station window shows catchment and capacity; 13 competing mods read (notes in `local/competitors.md`).
 - Waiting passengers survive rebuilds (findings, 2026-11-05).
 
+## TRM: Industry Emissions
+
+Levels did nothing on road and tram stations and harbours while it was active (seen 2026-11-07; [docs/compatibility.md](docs/compatibility.md)). Fixed in the dev version (`postRunFn` in `mod.script.tl`, `station_original.script.lua`); tested outside the game with stand-ins for TRM's loader and `util.useFn`, both paths.
+
+- [ ] In game, TRM after us, "Rebalanced": the log shows `postRun trmRedirected=2` and two `trmRedirect` lines; a buy on a road station, a tram station and a harbour gives an `applied` line, a wider circle and the upkeep factor; the stations levelled while it was broken (Peterlee Station Halt, Peterlee Oil Refinery East Port) get their stored levels at their next buy.
+- [ ] TRM before us: the same.
+- [ ] Placing a new road station and a new harbour, and Configure on a levelled road station, with TRM active (the shim runs on every preview).
+- [ ] No TRM error "has no function updateFn" in the log: that would mean `ug_require` served our shim from its cache and TRM read another file's `data()` (the risk Depot Retrofits found in its own fix, not seen there with TRM after it; nothing on our side prevents it).
+- [ ] A levelled road station's pollution with TRM: our factor times TRM's 0.5, and kept by TRM's emissions game script after the emitter refills.
+- [ ] TRM at "Base Game", and without TRM: `trmRedirected=0`, levels as before.
+- [ ] If `trmRedirected` shows but the levels still do not apply, the `postRunFn` edit did not reach the Lua states that build: fall back to the same edit in the `loadConstruction` modifier (covers TRM before us only).
+
 ## To test in game
 
 - [ ] Probe 3 rest: an era swap and catenary keep the levels. Done: Configure on road and tram stations, cargo rail module add, remove and move.

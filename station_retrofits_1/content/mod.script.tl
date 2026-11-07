@@ -4,6 +4,10 @@
 -- - loadScript wraps the station script's updateFn (core.wrapUpdate). The game loads a construction's update script through
 --   this modifier, so the wrapper runs whichever way the construction is reached and sits inside any mod that wraps the
 --   construction (docs/design/findings.md, "Seen in other mods' code").
+-- postRunFn (after every mod's modifiers have run, so in either load order) points TRM: Industry Emissions at
+-- station_original.script.lua: TRM's wrapper for road and tram stations and harbours loads the base script itself, which
+-- skips the loadScript wrapper and lost every level (docs/compatibility.md). It changes only TRM's own param naming the
+-- script to load, never updateScript.fileName.
 -- Base stations only for now. Log lines start with "STATION_RETROFITS".
 
 local modVersion = "0.1-dev"
@@ -33,7 +37,16 @@ end
 
 local record StationRetrofitsMod
 	runFn : function(table, table, {string : {string : integer}})
+	postRunFn : function(any, any, any, any)
 end
+
+-- TRM: Industry Emissions' wrapper (its building_build.script.lua) reads the script it wraps from these capture params: a
+-- .lua path ("::/stations/street/modular_street_station/modular_terminal.script.lua") and the function's name.
+local trmScriptKey = "beOriginalScript"
+local trmFnKey = "beOriginalFn"
+-- Where station_original.script.lua finds the original, as a util.useFn reference ("…/modular_terminal.script@updateFn").
+local originalKey = "stationRetrofitsOriginal"
+local shimPath = "station_retrofits_1::/station_original.script.lua"
 
 local say = function(text : string)
 	if log ~= nil then
@@ -99,6 +112,45 @@ local wrapScript = function(fileName : string, script : StationScript) : Station
 	return script
 end
 
+-- For each base station construction whose update script is a wrapper that names the base script in trmScriptKey, points
+-- that param at the shim and keeps the original in originalKey. The update script is replaced by a fresh ScriptRef with the
+-- same fileName, as TRM: Infrastructure Upkeep edits station constructions in its own postRunFn. Returns how many were
+-- pointed at the shim.
+local redirectTrm = function() : integer
+	local count = 0
+	for id, name in pairs(api.res.constructionRep.getAll(true)) do
+		local kind = core.kindOf(name, core.constructionKinds)
+		if kind ~= nil then
+			local con = api.res.constructionRep.get(id)
+			local script = con and con.updateScript
+			local params = script and (script.params as {string : any}) or nil
+			local named = params and params[trmScriptKey] or nil
+			if type(named) == "string" then
+				local scriptName = named as string
+				if scriptName == shimPath then
+					say("trmRedirect already construction=" .. tostring(name))
+				elseif core.kindOf(scriptName, core.scriptKinds) == kind then
+					local copy : {string : any} = {}
+					for key, value in pairs(params) do copy[key] = value end
+					local fnName = type(params[trmFnKey]) == "string" and params[trmFnKey] as string or "updateFn"
+					copy[originalKey] = scriptName:gsub("%.lua$", "") .. "@" .. fnName
+					copy[trmScriptKey] = shimPath
+					local ref = api.type.ScriptRef.new()
+					ref.fileName = script.fileName
+					ref.params = copy as table
+					con.updateScript = ref
+					count = count + 1
+					say("trmRedirect construction=" .. tostring(name) .. " kind=" .. kind .. " wrapper=" .. tostring(script.fileName)
+						.. " original=" .. tostring(copy[originalKey]))
+				else
+					say("trmRedirect skipped construction=" .. tostring(name) .. " kind=" .. kind .. " names=" .. scriptName)
+				end
+			end
+		end
+	end
+	return count
+end
+
 local mod : StationRetrofitsMod = {
 	runFn = function(_captureParams : table, _settings : table, _allModParams : {string : {string : integer}})
 		say("version " .. modVersion .. " logLevel=" .. (logFull and "full" or "summary") .. " core=" .. tostring(coreLoaded)
@@ -119,6 +171,15 @@ local mod : StationRetrofitsMod = {
 			return script
 		end)
 		if not registered then say("loadScript unavailable error=" .. tostring(registerError)) end
+	end,
+	postRunFn = function(_captureParams : any, _configDict : any, _allModParams : any, _baseConfig : any)
+		if core == nil then return end
+		local ok, result = pcall(redirectTrm)
+		if ok then
+			say("postRun trmRedirected=" .. tostring(result))
+		else
+			say("postRun trmRedirectError error=" .. tostring(result))
+		end
 	end,
 }
 

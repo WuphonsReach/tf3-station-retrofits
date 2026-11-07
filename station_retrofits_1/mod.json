@@ -5,7 +5,7 @@
     "options": null,
     "params": [],
     "postRunScript": {
-        "fileName": ""
+        "fileName": "station_retrofits_1::/mod.script@postRunFn"
     },
     "preRunScript": {
         "fileName": ""

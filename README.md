@@ -14,6 +14,7 @@ A planned Transport Fever 3 script mod: stations get levels that widen their cat
 - [docs/design/findings.md](docs/design/findings.md): what is known about stations in the base game, with source files, and what is still unknown.
 - [docs/design/spec.md](docs/design/spec.md): the draft retrofits, prices and scope.
 - [docs/design/probe-plan.md](docs/design/probe-plan.md): the in-game probes to run first.
+- [docs/compatibility.md](docs/compatibility.md): known and suspected incompatibilities with other mods.
 - [TODO.md](TODO.md): what is left to do.
 
 ## Licence
