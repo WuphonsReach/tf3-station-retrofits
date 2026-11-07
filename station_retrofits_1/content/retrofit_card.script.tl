@@ -93,12 +93,9 @@ local buyEvent = "stationRetrofitsBuy"
 local gameScriptName = "station_retrofits_1::/retrofits.gs"
 
 -- Stock icons, as Depot Retrofits uses them: the line manager's standard-priority dot for the catchment circle, the vehicle
--- window's pollution and noise (gui/entity_window/vehicle/vehicle.tl), the upkeep footer's symbol
--- (gui/entity_window/entity_window_util.tl) and the shopping cart of the vehicle store's buy button
--- (gui/line_vehicle_mgmt/vehicle_store_window.tl).
+-- window's pollution and noise (gui/entity_window/vehicle/vehicle.tl) and the upkeep footer's symbol
+-- (gui/entity_window/entity_window_util.tl).
 local upkeepIcon = "::/gui/entity_window/icons/symbol_dollar_gear.tga"
-local buyIcon = "::/gui/line_vehicle_mgmt/icons/symbol_shopping_cart.tga"
-local buyTooltip = "Buy the next level."
 local treeIcons : {string : string} = {
 	catchment = "::/gui/entity_window/icons/prio_standard.tga",
 	pollution = "::/gui/entity_window/icons/symbol_pollution.tga",
@@ -149,7 +146,16 @@ local grouped = function(amount : number) : string
 	return sign .. digits:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
 end
 
+-- Money as the game writes it (api.util.formatMoney): in the player's currency, full or short as set in the game's settings,
+-- as in the rest of the station window. "$1,292,000" when the game's formatter fails; its first failure is logged.
+local moneyErrorLogged = false
 local money = function(amount : number) : string
+	local ok, formatted = pcall(api.util.formatMoney, round(amount))
+	if ok and type(formatted) == "string" and formatted ~= "" then return formatted end
+	if not moneyErrorLogged then
+		moneyErrorLogged = true
+		say("card formatMoneyError error=" .. tostring(formatted))
+	end
 	local digits = grouped(amount)
 	if digits:sub(1, 1) == "-" then return "-$" .. digits:sub(2) end
 	return "$" .. digits
@@ -430,6 +436,7 @@ local getDrawnStyles = function() : {string : StyleSheet}
 				gap = styleutil.makeStyle{ size = { 3, 16 } },
 				rowHeight = styleutil.makeStyle{ size = { 0, 24 } },
 				buttonGap = styleutil.makeStyle{ size = { 8, 0 } },
+				stepGap = styleutil.makeStyle{ size = { 4, 0 } },
 			}
 			for state, color in pairs(boxColors) do
 				result[state] = styleutil.makeStyle{ backgroundColor = color, size = { 9, 16 } }
@@ -616,12 +623,10 @@ local heading = function(s : CardState, entry : Entry, rows : {TreeNodeId})
 	if #s.entries > 1 then rows[#rows + 1] = text(kindNames[entry.kind] or entry.kind) end
 end
 
--- The stock shopping cart and the price; a rank too low (or unknown) replaces the price. Short of money the price stays and the
--- button is greyed out, as the game script refuses the buy. The game shows no tooltip on a disabled button (Depot Retrofits'
--- findings), so the label says why. No "buying" state: the rebuild lands within a second, paused or not, and the card redraws
--- with the new level. A second click before that is ignored (tries), and the game script refuses a stale level, so nothing
--- is charged twice. A rebuild the game refuses shows as the yellow banner about ten seconds later (readRefused); the buttons
--- stay, so the buy can be sent again.
+-- Sends a buy for levels level + 1 to target. No "buying" state: the rebuild lands within a second, paused or not, and the
+-- card redraws with the new level. A second click before that is ignored (tries), and the game script refuses a stale level,
+-- so nothing is charged twice. A rebuild the game refuses shows as the yellow banner about ten seconds later (readRefused);
+-- the buttons stay, so the buy can be sent again.
 local sendBuy = function(construction : Engine.Entity, tree : string, level : integer, target : integer, price : integer)
 	-- One buy at a time per station: a second click before the first lands or is refused is ignored.
 	if tries[construction] ~= nil then return end
@@ -639,65 +644,80 @@ local sendBuy = function(construction : Engine.Entity, tree : string, level : in
 		{ construction = construction, tree = tree, from = level, to = target, click = click }))
 end
 
--- The ">|" button beside the buy button: buys every level the rank allows and the balance pays for in one rebuild, for the
--- sum of their prices (what clicking them one by one costs). Short of the rank's limit for want of money, it buys as far as
--- the money goes. The levels and the price are in the tooltip, as the row has no room for them. Greyed unless it would buy
--- at least two levels (the single button covers one); the game shows no tooltip on a greyed button.
-local maxButton = function(entry : Entry, tree : string) : TreeNodeId
+-- Whether the next level can be bought, a sentence with its price or why not, and the price. Short of money the game script
+-- would refuse the buy, so the button is greyed out.
+local nextStatus = function(s : CardState, entry : Entry, tree : string) : boolean, string, integer
+	local level = entry.levels[tree]
+	local nextLevel = level + 1
+	if level >= core.maxLevel then return false, "Highest level reached.", nil end
+	local price = entry.buildPrice and core.levelPrice(entry.buildPrice, entry.kind, tree, nextLevel) or nil
+	if price == nil then return false, "Price unknown (see the game log).", nil end
+	local named = "Level " .. tostring(nextLevel)
+	if tree == "catchment" and entry.radius == nil then return false, "The station has no catchment circle.", price end
+	if s.rank == nil then return false, "The company rank could not be read (see the game log).", price end
+	if nextLevel > s.rank then return false, named .. " needs company rank " .. tostring(nextLevel) .. ".", price end
+	if entry.affordable ~= nil and not entry.affordable[tree] then
+		return false, named .. " costs " .. money(price) .. ": not enough money.", price
+	end
+	return true, "Buy level " .. tostring(nextLevel) .. " for " .. money(price) .. ".", price
+end
+
+-- How far ">|" buys: every level the rank allows and the balance pays for, in one rebuild, for the sum of their prices (what
+-- buying them one by one costs). Short of the rank's limit for want of money, it buys as far as the money goes. Only offered
+-- when it would buy at least two levels (">" covers one). Returns the target level and the price, or nil.
+local maxReach = function(entry : Entry, tree : string) : integer, integer
 	local level = entry.levels[tree]
 	local target = entry.reach ~= nil and entry.reach[tree] or level
-	local enabled = entry.buildPrice ~= nil and target >= level + 2 and not (tree == "catchment" and entry.radius == nil)
-	local price = enabled and core.runPrice(entry.buildPrice, entry.kind, tree, level, target) or nil
-	local tooltip = enabled and ("Buy levels " .. tostring(level + 1) .. " to " .. tostring(target) .. " for " .. money(price) .. ".")
-		or nil
-	local construction = entry.construction
+	if entry.buildPrice == nil or target < level + 2 or (tree == "catchment" and entry.radius == nil) then return nil, nil end
+	return target, core.runPrice(entry.buildPrice, entry.kind, tree, level, target)
+end
+
+-- A small button with a text label ("<", ">", ">|"). "primary" is the class the base game's dialog buttons use
+-- (gui/line_vehicle_mgmt/feedback_list_util.tl); its disabled style greys the text (gui/main/default.css.lua).
+-- "station-retrofits-step" gives the three the same minimum width (retrofit_card.css.lua), so the rows line up. The game shows
+-- no tooltip on a disabled button (Depot Retrofits' findings), so the row's tooltip also gives the price or why not.
+local stepButton = function(label : string, enabled : boolean, tooltip : string, key : string, onClick : function()) : TreeNodeId
 	return builtin.Button{
-		meta = { class = "primary, station-retrofits-max", enabled = enabled, tooltip = tooltip,
-			localKey = "station_retrofits_max_" .. tostring(construction) .. "_" .. tree },
-		content = text(">|"),
+		meta = { class = "primary, station-retrofits-step", enabled = enabled, tooltip = tooltip, localKey = key },
+		content = text(label),
 		onClick = function()
-			if not enabled then return end
-			sendBuy(construction, tree, level, target, price)
+			if enabled then onClick() end
 		end,
 	}
 end
 
-local buyButton = function(s : CardState, entry : Entry, tree : string) : TreeNodeId
-	local level = entry.levels[tree]
-	local nextLevel = level + 1
-	local label, tooltip : string, string
-	local enabled = false
-	local price = entry.buildPrice and core.levelPrice(entry.buildPrice, entry.kind, tree, nextLevel) or nil
-	if price == nil then
-		label, tooltip = "?", "Price unknown"
-	elseif tree == "catchment" and entry.radius == nil then
-		label, tooltip = money(price), "The station has no catchment circle"
-	elseif s.rank == nil then
-		label, tooltip = "Rank ?", "The company rank could not be read (see the game log)"
-	elseif nextLevel > s.rank then
-		label, tooltip = "Rank " .. tostring(nextLevel), "Needs company rank " .. tostring(nextLevel)
-	elseif entry.affordable ~= nil and not entry.affordable[tree] then
-		label, tooltip = money(price), "Not enough money"
-	else
-		label, tooltip = money(price), buyTooltip
-		enabled = true
-	end
+-- The tree's three buttons: "<" removes a level (not built yet: drawn greyed so the row keeps its final layout; TODO.md),
+-- ">" buys the next level, ">|" buys every level it can.
+local treeButtons = function(s : CardState, entry : Entry, tree : string) : {TreeNodeId}
 	local construction = entry.construction
-	return builtin.Button{
-		-- "primary" is the class the base game's dialog buttons use (gui/line_vehicle_mgmt/feedback_list_util.tl); its disabled
-		-- style greys the icon and the text (gui/main/default.css.lua). "station-retrofits-buy" gives every buy button the same
-		-- minimum width (retrofit_card.css.lua), so the rows line up.
-		meta = { class = "primary, station-retrofits-buy", enabled = enabled, tooltip = tooltip,
-			localKey = "station_retrofits_buy_" .. tostring(construction) .. "_" .. tree },
-		content = builtin.Component{ layout = builtin.BoxLayout{
-			orientation = builtin.type.Orientation.Horizontal,
-			children = { icon(buyIcon), text(label) },
-		} },
-		onClick = function()
-			if not enabled then return end
-			sendBuy(construction, tree, level, nextLevel, price)
-		end,
+	local level = entry.levels[tree]
+	local key = "station_retrofits_" .. tostring(construction) .. "_" .. tree
+	local canBuy, buyText, price = nextStatus(s, entry, tree)
+	local target, runPrice = maxReach(entry, tree)
+	local nodes : {TreeNodeId} = {
+		stepButton("<", false, nil, key .. "_down", function() end),
+		stepButton(">", canBuy, buyText, key .. "_buy", function() sendBuy(construction, tree, level, level + 1, price) end),
+		stepButton(">|", target ~= nil,
+			target and ("Buy levels " .. tostring(level + 1) .. " to " .. tostring(target) .. " for " .. money(runPrice) .. ".") or nil,
+			key .. "_max", function() sendBuy(construction, tree, level, target, runPrice) end),
 	}
+	local styles = getDrawnStyles()
+	if styles == nil then return nodes end
+	local spaced : {TreeNodeId} = {}
+	for n, node in ipairs(nodes) do
+		if n > 1 then spaced[#spaced + 1] = builtin.Component{ meta = { styleSheet = styles.stepGap } } end
+		spaced[#spaced + 1] = node
+	end
+	return spaced
+end
+
+-- The row's tooltip in the expanded card: the tree's tooltip, then what ">" and ">|" would buy and for how much, or why not.
+local nextTooltip = function(s : CardState, entry : Entry, tree : string) : string
+	local level = entry.levels[tree]
+	local _, buyText = nextStatus(s, entry, tree)
+	local target, runPrice = maxReach(entry, tree)
+	local maxText = target and ("\nLevels " .. tostring(level + 1) .. " to " .. tostring(target) .. ": " .. money(runPrice) .. ".") or ""
+	return rowTooltip(s, tree, level) .. "\n" .. buyText .. maxText
 end
 
 -- Collapsed: per tree the symbol, the boxes and what the levels do now; above them the banner after a refused buy (a refused
@@ -722,39 +742,34 @@ local summaryRows = function(s : CardState) : {TreeNodeId}
 	return rows
 end
 
--- Expanded: per tree what the next level changes at the left, and at the right the upkeep the footer would show after it,
--- then the buy button. The buttons share a minimum width, so the upkeep figures end in one column (centred between the two,
--- they did not line up in game). The level number is left out for room (in game the row ran past the card's edge with it);
--- the tooltip gives the level.
+-- Expanded: per tree one line: what the next level changes at the left; at the right the upkeep the footer would show after it
+-- and the buttons "<", ">", ">|". The prices are in the tooltips, so the line has room for the three buttons (with the price
+-- on the buy button, the text ran into the upkeep on a harbour). The buttons share a minimum width, so the upkeep figures end
+-- in one column. The level number is left out; the tooltip gives it.
 local nextRows = function(s : CardState) : {TreeNodeId}
 	local rows : {TreeNodeId} = {}
 	for _, entry in ipairs(s.entries) do
 		heading(s, entry, rows)
+		local styles = getDrawnStyles()
 		for _, tree in ipairs(core.treesOf(entry.kind)) do
 			local level = entry.levels[tree]
-			local tooltip = rowTooltip(s, tree, level)
-			if level >= core.maxLevel then
-				rows[#rows + 1] = row({ icon(treeIcons[tree]), text(" Highest level") }, builtin.Component{}, tooltip)
-			else
+			local right : {TreeNodeId} = {}
+			local effect = "Highest level"
+			if level < core.maxLevel then
 				local nextLevel = level + 1
-				local upkeep : TreeNodeId
+				effect = effectNext(entry, tree, nextLevel)
 				if entry.upkeep ~= nil then
 					local after = entry.upkeep / core.upkeepFactor(entry.levels) * core.upkeepFactor(core.withLevel(entry.levels, tree, nextLevel))
-					upkeep = builtin.BoxLayout{ orientation = builtin.type.Orientation.Horizontal, children = { icon(upkeepIcon), text(perYear(after)) } }
+					right[1] = builtin.BoxLayout{ orientation = builtin.type.Orientation.Horizontal, children = { icon(upkeepIcon), text(perYear(after)) } }
 				else
-					upkeep = text("?")
+					right[1] = text("?")
 				end
-				-- A gap between the upkeep and the button.
-				local styles = getDrawnStyles()
-				local right : {TreeNodeId} = { upkeep }
 				if styles ~= nil then right[#right + 1] = builtin.Component{ meta = { styleSheet = styles.buttonGap } } end
-				right[#right + 1] = buyButton(s, entry, tree)
-				if styles ~= nil then right[#right + 1] = builtin.Component{ meta = { styleSheet = styles.buttonGap } } end
-				right[#right + 1] = maxButton(entry, tree)
-				rows[#rows + 1] = row({ icon(treeIcons[tree]), text(" " .. effectNext(entry, tree, nextLevel)) },
-					builtin.BoxLayout{ orientation = builtin.type.Orientation.Horizontal, children = right },
-					tooltip)
 			end
+			for _, node in ipairs(treeButtons(s, entry, tree)) do right[#right + 1] = node end
+			rows[#rows + 1] = row({ icon(treeIcons[tree]), text(" " .. effect) },
+				builtin.BoxLayout{ orientation = builtin.type.Orientation.Horizontal, children = right },
+				nextTooltip(s, entry, tree))
 		end
 	end
 	return rows
