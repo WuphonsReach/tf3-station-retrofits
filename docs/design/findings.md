@@ -341,7 +341,7 @@ logLevel `"full"`. Logs: `local/logs/stdout-2026-11-07-maxbutton.txt`, `stdout-2
 
 ### 2026-11-07: removing a level
 
-logLevel `"full"`, TRM: Infrastructure Upkeep active. Log: `local/logs/stdout-2026-11-07-remove.txt`; crop `local/screenshots/2026-11-07-170221-remove-tooltip.png`.
+logLevel `"full"`, TRM: Infrastructure Upkeep active. Log: `local/logs/stdout-2026-11-07-remove.txt`; screenshot 20261107_170221 (the "<" tooltip).
 
 - **18 removals and 4 buys on a cargo rail station** (construction 340874), each booked once, when the level had moved; every refund and price equal to the card's (`buy refunded`, `direction=down`, carrier RAIL).
 - A 14-level ">|" catchment buy for $7,806,875, removed level by level, refunded $6,245,716: 80%, with per-level rounding.
