@@ -704,13 +704,20 @@ local downStatus = function(entry : Entry, tree : string) : boolean, string, int
 end
 
 -- How far ">|" buys: every level the rank allows and the balance pays for, in one rebuild, for the sum of their prices (what
--- buying them one by one costs). Short of the rank's limit for want of money, it buys as far as the money goes. Only offered
--- when it would buy at least two levels (">" covers one). Returns the target level and the price, or nil.
+-- buying them one by one costs). Short of the rank's limit for want of money, it buys as far as the money goes. Offered
+-- whenever it would buy at least one level, so it stays usable for the last level too. Returns the target level and the
+-- price, or nil.
 local maxReach = function(entry : Entry, tree : string) : integer, integer
 	local level = entry.levels[tree]
 	local target = entry.reach ~= nil and entry.reach[tree] or level
-	if entry.buildPrice == nil or target < level + 2 or (tree == "catchment" and entry.radius == nil) then return nil, nil end
+	if entry.buildPrice == nil or target < level + 1 or (tree == "catchment" and entry.radius == nil) then return nil, nil end
 	return target, core.runPrice(entry.buildPrice, entry.kind, tree, level, target)
+end
+
+-- "level 9" or "levels 9 to 13", for what ">|" buys.
+local levelsText = function(level : integer, target : integer) : string
+	if target == level + 1 then return "level " .. tostring(target) end
+	return "levels " .. tostring(level + 1) .. " to " .. tostring(target)
 end
 
 -- A small button with a text label ("<", ">", ">|"). "primary" is the class the base game's dialog buttons use
@@ -739,7 +746,7 @@ local treeButtons = function(s : CardState, entry : Entry, tree : string) : {Tre
 		stepButton("<", canRemove, downText, key .. "_down", function() sendBuy(construction, tree, level, level - 1, refund) end),
 		stepButton(">", canBuy, buyText, key .. "_buy", function() sendBuy(construction, tree, level, level + 1, price) end),
 		stepButton(">|", target ~= nil,
-			target and ("Buy levels " .. tostring(level + 1) .. " to " .. tostring(target) .. " for " .. money(runPrice) .. ".") or nil,
+			target and ("Buy " .. levelsText(level, target) .. " for " .. money(runPrice) .. ".") or nil,
 			key .. "_max", function() sendBuy(construction, tree, level, target, runPrice) end),
 	}
 	local styles = getDrawnStyles()
@@ -752,13 +759,15 @@ local treeButtons = function(s : CardState, entry : Entry, tree : string) : {Tre
 	return spaced
 end
 
--- The row's tooltip in the expanded card: the tree's tooltip, then what ">" and ">|" would buy and for how much, or why not,
--- then what "<" refunds (left out at level 0, where the empty boxes say it).
+-- The row's tooltip in the expanded card: the tree's tooltip, then what ">" and ">|" would buy and for how much, or why not
+-- (">|" left out when it buys only the level ">" buys), then what "<" refunds (left out at level 0, where the empty boxes
+-- say it).
 local nextTooltip = function(s : CardState, entry : Entry, tree : string) : string
 	local level = entry.levels[tree]
 	local _, buyText = nextStatus(s, entry, tree)
 	local target, runPrice = maxReach(entry, tree)
-	local maxText = target and ("\nLevels " .. tostring(level + 1) .. " to " .. tostring(target) .. ": " .. money(runPrice) .. ".") or ""
+	local maxText = (target and target > level + 1)
+		and ("\nLevels " .. tostring(level + 1) .. " to " .. tostring(target) .. ": " .. money(runPrice) .. ".") or ""
 	local _, downText = downStatus(entry, tree)
 	local removeText = level > 0 and ("\n" .. downText) or ""
 	return rowTooltip(s, tree, level) .. "\n" .. buyText .. maxText .. removeText
