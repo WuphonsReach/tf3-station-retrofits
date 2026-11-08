@@ -17,15 +17,13 @@
 
 ## TRM: Industry Emissions
 
-Levels did nothing on road and tram stations and harbours while it was active (seen 2026-11-07; [docs/compatibility.md](docs/compatibility.md)). Fixed in the dev version (`postRunFn` in `mod.script.tl`, `station_original.script.lua`); tested outside the game with stand-ins for TRM's loader and `util.useFn`, both paths.
+Levels did nothing on road and tram stations and harbours while it was active (seen 2026-11-07; [docs/compatibility.md](docs/compatibility.md)). Fixed in the dev version (`postRunFn` in `mod.script.tl`, `station_original.script.lua`); tested outside the game with stand-ins for TRM's loader and `util.useFn`, both paths, and in game with TRM before us (below).
 
-- [ ] In game, TRM after us, "Rebalanced": the log shows `postRun trmRedirected=2` and two `trmRedirect` lines; a buy on a road station, a tram station and a harbour gives an `applied` line, a wider circle and the upkeep factor; the stations levelled while it was broken (Peterlee Station Halt, Peterlee Oil Refinery East Port) get their stored levels at their next buy.
-- [ ] TRM before us: the same.
-- [ ] Placing a new road station and a new harbour, and Configure on a levelled road station, with TRM active (the shim runs on every preview).
+- [x] TRM before us (2026-11-08, 1974 test save, TRM: Infrastructure Upkeep and Industry Emissions at their defaults, then Station Retrofits, then Depot Retrofits; `local/logs/stdout-2026-11-07-trmfirst.txt`): `postRun trmRedirected=2` (`modular_terminal.con`, `harbor_modular.con`), `trmShim loaded … via=useFn` in each Lua state that built one, no TRM or load errors. 83 buys on two road stations, a harbour and a rail station, 41 charged and 42 refunded, each equal to the card's amount; 82 `applied` lines. Catchment 1 on a road station 175 -> 180.2 m and +15% upkeep; harbour upkeep -5% a level; catchment 11 232.8 m (175 + 33%). Pollution 11 and noise 11 on a road station: emitter 45 -> 20.25 and 4.5 -> 2.025 (× 0.45), so TRM's emissions script keeps our share and the two multiply.
+- [ ] TRM after us with the fix (the order the bug was seen in): the same checks; the stations levelled while it was broken (Peterlee Station Halt, Peterlee Oil Refinery East Port) get their stored levels at their next buy.
+- [ ] Placing a new road station and a new harbour, and Configure on a levelled road station, with TRM active (the shim runs on every preview). Not done yet; with TRM before us an airfield, a heliport, an airport, a train depot and a Roundhouse placed without errors (2026-11-08), none of them a station we level.
 - [ ] No TRM error "has no function updateFn" in the log: that would mean `ug_require` served our shim from its cache and TRM read another file's `data()` (the risk Depot Retrofits found in its own fix, not seen there with TRM after it; nothing on our side prevents it).
-- [ ] A levelled road station's pollution with TRM: our factor times TRM's 0.5, and kept by TRM's emissions game script after the emitter refills.
 - [ ] TRM at "Base Game", and without TRM: `trmRedirected=0`, levels as before.
-- [ ] If `trmRedirected` shows but the levels still do not apply, the `postRunFn` edit did not reach the Lua states that build: fall back to the same edit in the `loadConstruction` modifier (covers TRM before us only).
 
 ## To test in game
 
