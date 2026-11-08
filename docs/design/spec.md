@@ -2,9 +2,9 @@
 
 ## In short
 
-Stations get levels, bought in the station's own window (one at a time, or all the rank and the money allow in one click) and removable one at a time for an 80% refund, the way [Depot Retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits) does it for depots. This is a draft: every number below is a starting point taken from Depot Retrofits, and the scope depends on the probes in [probe-plan.md](probe-plan.md). Levels are applied and shown (probes 1 and 2), and buying them has been tested in game on rail, road, tram, cargo and harbour stations (findings, test results). Removing a level is built but not yet tested in game. Not yet tested either: an era swap or catenary change on a levelled station, a vehicle at a platform during a rebuild, and loading a save with levelled stations.
+Stations get levels, bought in the station's own window (one at a time, or all the rank and the money allow in one click) and removable one at a time for an 80% refund, the way [Depot Retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits) does it for depots. The trees, prices and card below are decided ("Decisions") and built; the spec stays a draft until the open decisions at the end are made and the last in-game tests pass. Buying and removing levels are tested in game on rail, road, tram, cargo and harbour stations (findings, test results). Not yet tested: an era swap or catenary change on a levelled station, a vehicle at a platform during a rebuild, a refused rebuild, and loading a save with levelled stations.
 
-The planned first version has three trees of 15 levels each (catchment radius, pollution, noise), plus an upkeep tree. Harbours get only the catchment and upkeep trees: a port emits no pollution or noise of its own (findings, 2026-11-05). Waiting capacity is not a tree: players already add it by building more station modules, and mods with larger stops or modules cover the rest. It covers the base modular stations (rail, road and tram terminals, harbours) and later stations from other mods that have the same shape. A tree's highest level is the company's claimed rank. A level is applied by rebuilding the station with new hidden params, as for depots.
+The first version has three trees of 15 levels each (catchment radius, pollution, noise), plus an upkeep tree. Harbours get only the catchment and upkeep trees: a port emits no pollution or noise of its own (findings, 2026-11-05). Waiting capacity is not a tree: players already add it by building more station modules, and mods with larger stops or modules cover the rest. It covers the base modular stations (rail, road and tram terminals, harbours) and later stations from other mods that have the same shape. A tree's highest level is the company's claimed rank. A level is applied by rebuilding the station with new hidden params, as for depots.
 
 ## Scope
 
@@ -23,7 +23,7 @@ The planned first version has three trees of 15 levels each (catchment radius, p
 
 The two kinds of tree carry over from Depot Retrofits: three trees improve the station and raise its upkeep; the upkeep tree cuts the total.
 
-| Tree | Game value changed | Per level (draft) | At level 15 |
+| Tree | Game value changed | Per level | At level 15 |
 |---|---|---|---|
 | Catchment radius | every circle in `station.catchmentAreas` | +3%, or at least +5 m | +45%, or at least +75 m |
 | Pollution | `metadata.emissions`, both states | −5% | −75% |
@@ -64,7 +64,7 @@ Notes:
 | *Rail or road station, all three trees full (for comparison)* | *3.5 years* | *25 years* | *11 years* |
 
   What a harbour's levels buy is the range (catchment) and the upkeep cut, nothing else. With catchment full the half price pays back a little faster than on other stations (9.4 years against 11); with no catchment levels it takes 30 years. The catchment tree has no payback figure: what a larger circle earns depends on the town.
-- **How upkeep is applied.** After the hook, the script's `maintenanceCost` already holds the modules' upkeep, and the game charges what the script leaves there; the wrapper multiplies it by the upkeep factor (probe 1).
+- **How upkeep is applied.** After the hook, the script's `maintenanceCost` already holds the modules' upkeep, and the game charges what the script leaves there; the wrapper multiplies it by the upkeep factor (probe 1). With a mod that scales module upkeep (TRM: Infrastructure Upkeep), the levels' factor stacks on it, but every price and refund falls by the same factor (open decision 2).
 - **Modules added later.** As in Depot Retrofits, levels are not repriced when the station grows; the upkeep the levels add follows the modules. Big stations pay big prices, since the build price grows with the modules.
 
 ## Buying a level
@@ -81,7 +81,7 @@ Notes:
 
 ## Removing a level
 
-- **What.** The "<" button removes the tree's top level, one per click, in one rebuild. The buy event carries `to` one below `from`; the game script checks that the stored level is still the one the card saw and above 0, with no rank or money check (a level above a lower rank can be removed too). Built, not yet tested in game; how the Finances tab shows the positive entry is unknown.
+- **What.** The "<" button removes the tree's top level, one per click, in one rebuild. The buy event carries `to` one below `from`; the game script checks that the stored level is still the one the card saw and above 0, with no rank or money check (a level above a lower rank can be removed too). Tested in game on rail, road and harbour stations, each refund booked once at the card's amount (findings, 2026-11-07 and 2026-11-08); how the Finances tab shows the positive entry is unknown.
 - **Refund: 80% of that level's price at today's build price**, as ">" would charge to buy it back now (`core.levelPrice`, so a harbour's half-price upkeep tree refunds half as much). Booked as a station construction entry with a positive amount, once the rebuild has landed; a rebuild that never lands refunds nothing. The game itself refunds 75% of the placement price when a building is demolished (seen once, on a mod depot: `../tf3-save-format/docs/depots.md`); 80% is a little kinder, so a misclick costs only a fifth of a level.
 - **No record of what a level cost.** The refund is priced from today's upkeep, not from what was paid. Keeping what was paid, or when, would mean a record for every level of every tree of every station. Without it, the refund can pay more than the level cost:
   - **Year steps.** Building upkeep, and with it the build price, steps up every 20 years (×1.5 at 1920, ×2.2 at 1940, ×3.2 at 1960, ×4.0 at 1980, ×5.0 at 2000, ×6.0 at 2020; `../tf3-save-format/docs/inflation.md`, "The year cost table"; the 1940, 1980 and 2020 steps are untested). A level bought before a step and removed after it pays back 20% more at 1920, 17% at 1940, 16% at 1960, nothing at 1980 and 2000, and 4% less at 2020.
@@ -109,3 +109,5 @@ As in Depot Retrofits: a tree's maximum level is the claimed company rank; no le
 ## Open decisions (for the user)
 
 1. Whether to look for what a port does emit (its ships' own pollution and noise are vehicle emissions, which no tree touches) and give harbours those levels.
+2. How to price levels with a mod that scales station upkeep. Prices come from the upkeep the game charges, so TRM: Infrastructure Upkeep (50% by default) halves every price and refund, and a station keeps its old upkeep until its next rebuild ([../compatibility.md](../compatibility.md), "Overlapping mods"). Pricing from the modules' own upkeep would avoid that, but the card cannot read it without the hook. The other option is to leave it: such a mod makes every station cheaper to run, and the levels with it.
+3. Scope: airports, airfields and heliports (they contain a hangar depot; keep them apart from Depot Retrofits) and the underground station (not modular).

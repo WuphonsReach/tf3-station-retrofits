@@ -2,16 +2,16 @@
 
 ## In short
 
-- **Status.** Probes 1 and 2 ran in game (test results at the bottom): a `loadScript` wrapper levelled a rail station, a street terminal and a harbour by rebuilding them, every value landed as the formulas say and held for 30 days, and a Retrofit card in the base station window shows each station's levels. The station's Configure (module editor) kept the bought levels on road and tram stations, and module adds, removals and moves on a cargo rail station kept its levels (probe 3, 2026-11-05). Not yet tested: era swaps, catenary, a vehicle at a platform during a rebuild, and loading a save with levelled stations. The station facts below come from reading the base game's station scripts (`base/content/stations/*.zip`, `scripts.zip`, `game_mechanics.zip`, `gui.zip`). The method is the one [Depot Retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits) uses, released and tested in game; its findings ([docs/design/findings.md](https://github.com/WuphonsReach/tf3-depot-retrofits/blob/main/docs/design/findings.md)) are the evidence for everything marked "from Depot Retrofits" below.
+- **Status.** Tested in game (test results at the bottom): a `loadScript` wrapper levels rail stations, road and tram stations and harbours by rebuilding them, and every value lands as the formulas say and held for 30 days (probe 1); a Retrofit card in the base station window shows the levels (probe 2); several hundred buys and removals from the card, on rail, road, tram, cargo and harbour stations, were each charged or refunded once at the card's price. Configure (the module editor) kept the levels on road and tram stations, and module adds, removals and moves on a cargo rail station kept them (probe 3). With TRM: Industry Emissions the levels needed a shim, now tested ([docs/compatibility.md](../compatibility.md)). Not yet tested: era swaps, catenary, a vehicle at a platform during a rebuild, a refused rebuild, and loading a save with levelled stations. The station facts below come from reading the base game's station scripts (`base/content/stations/*.zip`, `scripts.zip`, `game_mechanics.zip`, `gui.zip`). The method is the one [Depot Retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits) uses, released and tested in game; its findings ([docs/design/findings.md](https://github.com/WuphonsReach/tf3-depot-retrofits/blob/main/docs/design/findings.md)) are the evidence for everything marked "from Depot Retrofits" below.
 - **Where the values come from.** A modular station's waiting capacity, comfort, catchment circles and emissions are all set by its construction's update script, in a `result.terminateConstructionHook` that the game runs after every module's own update script. The values are sums of the modules' `metadata` (`moreCapacity`, `comfortFactor`, `catchmentPassenger`/`catchmentCargo`, `emissionConfig`), which the hook reads from `params.modules`. So a wrapper that runs the original update script, then wraps the hook it returns, sees the station's final values and can scale them. Unlike the Roundhouse depot in Depot Retrofits, no module adds to these values after the wrapper.
 - **How a level would be applied.** As for depots: hidden level params on the construction, and a rebuild (`createProposalReplaceConstruction`) to apply a new level. Unlike depots, the station script should be wrapped through a `loadScript` modifier, not by rewriting the construction's `updateScript`, and the window should get a card, not a tab (see "Seen in other mods' code"). No game command changes a station's capacity, catchment or comfort at run time (`api/tealdef/api/cmd.d.tl` has none).
 - **Upkeep scales directly.** After a modular station's hook has run, `result.maintenanceCost` already holds the modules' upkeep (probe 1: it equalled their sum), and the game charges 1.25 × whatever the script leaves there (this save's settings). So every tree, the upkeep tree included, works by multiplying that value; no negative upkeep is needed.
 - **A port emits no pollution or noise of its own.** Every harbour's station emitter read 0 / 0 before its first level, and in the pollution and noise overlays a harbour, expanded or not, shows no halo (2026-11-05); only its ships smoke, and ships are vehicles. So harbours get only the catchment and upkeep trees (spec).
 - **Kerbside stops are out of scope** (decided 2026-11-05). They are edge objects. The six base bus and tram stops (`street/small_stops/*.con.lua`) declare `edgeObject` and put a `streetTerminal` on the street. Depot Retrofits skips edge objects on purpose. Whether a replace proposal works on one is unknown.
-- **Other mods already change these values.** Several script mods on mod.io set station catchment, waiting capacity or pollution, or add to the station window. Station Retrofits differs by being per station, bought and rank-gated, but it has to stack with them; how they apply their values is not checked (unknown 12). Notes on them are kept outside the repo.
+- **Other mods already change these values.** Several script mods on mod.io set station catchment, waiting capacity or pollution, or add to the station window. Station Retrofits differs by being per station, bought and rank-gated, but it has to stack with them; how they apply their values is read from their code, not tested in game (unknown 12). Notes on them are kept outside the repo.
 - **A rebuild is cheap and keeps the station** (probe 1): no charge, same construction and station ids, same line stops, the one waiting passenger kept. The station's emitter reads 0 right after a rebuild and is back, scaled, within a game day.
 - **The window card works** (probe 2): a react plugin for `::StationGroupEowExtensionPoint` adds a card to the base station window, which stays as it was. One card per station group; a tram terminal in a rail station's building is its own construction and group, so it gets its own card and levels.
-- **Biggest unknowns** (see the end): what a rebuild does to a crowded station and to vehicles at the platforms, how often the game refuses one (stations have more track and road connections than depots), and rebuilds the game starts.
+- **Biggest unknowns** (see the end): what a rebuild does to vehicles at the platforms, how often the game refuses one (stations have more track and road connections than depots), and era and catenary swaps.
 
 ## Station types in the base game
 
@@ -33,8 +33,8 @@ Notes:
 
 - The airport's and airfield's hangar modules (`air/airport/ap_hangar.module.lua`, `air/airfield/af_hangar.module.lua`) add a depot (`maintenancePool` 16, radius 550 for the airport's) and the heliport's script adds one too. These constructions are both a station and a depot. Depot Retrofits does not wrap them today: its test is the depot HUD icons, a depot `constructionType` or a `depots/` folder, and airports have none of these. If both mods ever wrapped the same construction, each would wrap the other's wrapper; keep them apart.
 - A warehouse is not a passenger or cargo station in the same sense: it holds `stocks`. Leave it out of a first version.
-- The engine's `ConstructionType` has station values (`STREET_STATION`, `RAIL_STATION`, `AIRPORT`, `HARBOR`, `STREET_STATION_CARGO`, `RAIL_STATION_CARGO`, `HARBOR_CARGO`, `AIRPORT_CARGO`; `api/tealdef/api/type.d.tl`). Whether the base station `.con` files set it is not checked; base depots did not. Stations from other mods may follow any shape, so detection should look at what the update script returns (a subconstruction with a `station` table, or a `streetTerminal`), as Depot Retrofits falls back to the `VEHICLE_DEPOT` component.
-- Only the rail station and the street terminal declare an `upgradeScript` (catenary swaps and module swaps, `modular_station.script.lua` `upgradeFn`). On road stations, Configure kept the hidden level params through every module change (test results, probe 3, first part); rail stations, era swaps and catenary are not checked yet. Depot Retrofits found the same for the depot upgrade scripts.
+- The engine's `ConstructionType` has station values (`STREET_STATION`, `RAIL_STATION`, `AIRPORT`, `HARBOR`, `STREET_STATION_CARGO`, `RAIL_STATION_CARGO`, `HARBOR_CARGO`, `AIRPORT_CARGO`; `api/tealdef/api/type.d.tl`). No base station `.con` sets it (below); base depots do not either. Stations from other mods may follow any shape, so detection should look at what the update script returns (a subconstruction with a `station` table, or a `streetTerminal`), as Depot Retrofits falls back to the `VEHICLE_DEPOT` component.
+- Only the rail station and the street terminal declare an `upgradeScript` (catenary swaps and module swaps, `modular_station.script.lua` `upgradeFn`). Configure kept the hidden level params through every module change on road and tram stations, and through module adds, removals and moves on a cargo rail station (test results, probe 3); era swaps and catenary are not checked yet. Depot Retrofits found the same for the depot upgrade scripts.
 - No base station declares `entityWindowScript`. Setting one, as Depot Retrofits does for depots, would stop the station window from opening (see "Seen in other mods' code").
 
 ## What the update script sets
@@ -83,20 +83,20 @@ From each module's `metadata` (`price`, `maintenanceCost`, `moreCapacity`, `catc
 
 For scale (from Depot Retrofits): a rail depot gives off 100 to 120 pollution, a road depot 80 to 100. A ten-platform rail station with a large main building gives off about 60 to 110 base, twice that when crowded. In Depot Retrofits' Dereham test, stations and tracks gave off about half of a town's pollution, which the depot mod cannot reach.
 
-## Carried over from Depot Retrofits (tested on depots, not on stations)
+## Carried over from Depot Retrofits
 
-Each of these held for depots and maintenance buildings in game; each needs a check on stations.
+Each of these held for depots and maintenance buildings in game. Where it is now seen on stations too, the point says so.
 
 - `addModifier("loadConstruction", fn)` in `runFn` can wrap any construction's `updateScript`; `scripts/util.tl` `useFn` loads the original from an absolute `file@function` reference. A relative reference needs resolving against the `.con` file's folder (base stations use paths like `/stations/rail/modular_station/modular_station.script@updateFn`).
-- Hidden level params: declared with `yearFrom = 9999`, they stay out of the build menu, are not passed when a building is placed, but are stored by a rebuild and passed to the update script.
-- A rebuild with `createProposalReplaceConstruction(entity, params)`, sent from the game script's `update` with `makeWorldBuildProposalCmd(proposal, nil, false, false, false)`, kept the construction and depot entity ids, kept vehicles' lines, cost nothing, and survived save and load. It cleared every vehicle's maintenance link (the game reassigned them within a day).
-- The game refuses a rebuild that collides with something built since (a house on the next lot; a road rebuilt to the depot's exit). Nothing is charged then. `builtin.ProposalViewer` with the real proposal, placed through `setActionFn`, shows what is in the way in red; `makeProposalData` with a `SimpleProposal` stand-in disagreed with the game too often.
-- Rebuilds the game starts (catenary, module edits through the depot's upgrade script) went through the wrapper and kept the levels.
+- Hidden level params: declared with `yearFrom = 9999`, they stay out of the build menu, are not passed when a building is placed, but are stored by a rebuild and passed to the update script. Seen on stations (probe 1).
+- A rebuild with `createProposalReplaceConstruction(entity, params)`, sent from the game script's `update` with `makeWorldBuildProposalCmd(proposal, nil, false, false, false)`, kept the construction and depot entity ids, kept vehicles' lines, cost nothing, and survived save and load. It cleared every vehicle's maintenance link (the game reassigned them within a day). On stations: ids, line stops and waiting passengers kept, no charge (probe 1, 2026-11-05); save and load not yet tested.
+- The game refuses a rebuild that collides with something built since (a house on the next lot; a road rebuilt to the depot's exit). Nothing is charged then. `builtin.ProposalViewer` with the real proposal, placed through `setActionFn`, shows what is in the way in red; `makeProposalData` with a `SimpleProposal` stand-in disagreed with the game too often. No station rebuild has been refused in a test yet.
+- Rebuilds the game starts (catenary, module edits through the depot's upgrade script) went through the wrapper and kept the levels. On stations: Configure does (probe 3); catenary and era swaps not yet tested.
 - `loadModule` modifiers are called by TF3 (Depot Retrofits wraps module update scripts with one). Probably not needed for stations, since the hook runs after the modules.
-- Upkeep: the construction's `MAINTENANCE_COST` component holds the script's `maintenanceCost`; the charged figure is that × the base config's `infrastructureMaintenanceScale` (`calcMaintenanceForSubconstruction`).
+- Upkeep: the construction's `MAINTENANCE_COST` component holds the script's `maintenanceCost`; the charged figure is that × the base config's `infrastructureMaintenanceScale` (`calcMaintenanceForSubconstruction`). Seen on stations (probe 1, 1.25 in that save).
 - Charging: a `JournalEntry` of type `CONSTRUCTION`, booked with `makeJournalBookAssetCmd` from the game script. Depot Retrofits uses `JournalEntry.Construction.DEPOT`; the list (`scripts/journal.d.tl`) also has `STATION`, which the station buy uses. The Finances tab shows it under Investments, Infrastructure, whatever the carrier (buy test).
 - The game script's state is written from the simulation thread (`handleEvent`) and from about ten worker threads (`update`), each with its own copy; module variables do not persist. A pending buy counts as landed once the stored level is at least the bought one.
-- Rank: base `company_progression_util.tl` gives the claimed rank.
+- Rank: base `company_progression_util.tl` gives the claimed rank. Seen in the station game script (`rankSource=util`).
 
 ## Seen in other mods' code (not tested by us)
 
@@ -115,14 +115,13 @@ From a read-only survey of the station, catchment, capacity and emission script 
 ## Unknowns
 
 1. What a rebuild does to vehicles loading at the platforms or a train halfway into one. Waiting passengers are kept: 102 of 144 at a terminal stayed through six rebuilds (2026-11-05); waiting cargo is not seen. Ids and lines are kept (probe 1). A train on the station's track outside the platforms steps back onto the next segment (buy test); a train at a platform stayed.
-2. Whether the Finances tab shows the levelled upkeep as the station window does (probe 1 checked the window and `calcMaintenanceForSubconstruction`).
-5. How often the game refuses a station rebuild, compared with depots. (Probe 1, then play.)
+2. Whether the Finances tab shows the levelled upkeep as the station window does (probe 1 checked the window and `calcMaintenanceForSubconstruction`), and how it shows a removal's refund.
+5. How often the game refuses a station rebuild, compared with depots. None refused in the tests so far.
 7. Whether era swaps and catenary swaps keep the hidden params. Configure on road stations and module edits on a cargo rail station do (probe 3).
-8. ~~Whether a kerbside stop can be replaced~~: out of scope, not tested.
 9. How much comfort and load speed change in play. Leave both out until measured.
 11. How stations from popular mods are shaped (whether they return a `station` table, use `terminateConstructionHook`, set `constructionType`).
 12. Whether the levels stack with other mods that change the same values. Read from their code (next section): they do if we wrap through `loadScript` and multiply the values we find; untested in game.
-13. Where a harbour's pollution and noise are emitted: nowhere that the station reaches. Both harbours in the pollution test, Nürnberg Hafen, and (2026-11-05) another port read 0 / 0 on the station entity's emitter, though the scaled `metadata.emissions` hold 34 / 210 and 68 / 420, and the overlays show no pollution or noise at a port. Harbours therefore get no pollution or noise trees. Not known: whether a ship loading at the quay adds anything to the station; the shots show none (ships emit as vehicles). A different source of the 34 / 210 figures is not found.
+13. Where a harbour's pollution and noise are emitted: nowhere that the station reaches (settled enough for the spec: harbours get no pollution or noise trees). Both harbours in the pollution test, Nürnberg Hafen, and (2026-11-05) another port read 0 / 0 on the station entity's emitter, though the scaled `metadata.emissions` hold 34 / 210 and 68 / 420, and the overlays show no pollution or noise at a port. Harbours therefore get no pollution or noise trees. Not known: whether a ship loading at the quay adds anything to the station; the shots show none (ships emit as vehicles). A different source of the 34 / 210 figures is not found.
 
 ## Test results
 
@@ -330,3 +329,29 @@ TRM: Industry Emissions and TRM: Infrastructure Upkeep active, loaded after Stat
 | Peterlee Oil Refinery East Port (harbour, 1974 save) | upkeep 1 to 11 | $496,000/Year, then $248,000 after the first rebuild (TRM: Infrastructure Upkeep catching up) | unchanged by levels 2 to 11 |
 
 A rail station in the same sessions was levelled as usual (22 `applied kind=rail` lines; pollution 63 -> 56.7 for one level with TRM's factor on top). Cause and fix in [docs/compatibility.md](../compatibility.md).
+
+### 2026-11-07: the ">|" button and the one-line card
+
+logLevel `"full"`. Logs: `local/logs/stdout-2026-11-07-maxbutton.txt`, `stdout-2026-11-07-oneline.txt`, `stdout-2026-11-07-narrow.txt`.
+
+- **">|" buys** on road, tram, rail and harbour stations: 21 buys in the first two sessions, each charged once, every charge equal to the tooltip's price (the sum of the single prices), several levels in one rebuild.
+- **The one-line card** ("<", ">", ">|", prices in the tooltips) fits on each of those stations, a harbour included; the upkeep figures end in one column.
+- **Money in the game's format.** With the narrower buttons and money through `api.util.formatMoney` (full setting), 6 more buys, no errors. Switching the game's money setting changes the card's figures at once.
+- Not seen: a larger font setting, a refused rebuild.
+
+### 2026-11-07: removing a level
+
+logLevel `"full"`, TRM: Infrastructure Upkeep active. Log: `local/logs/stdout-2026-11-07-remove.txt`; crop `local/screenshots/2026-11-07-170221-remove-tooltip.png`.
+
+- **18 removals and 4 buys on a cargo rail station** (construction 340874), each booked once, when the level had moved; every refund and price equal to the card's (`buy refunded`, `direction=down`, carrier RAIL).
+- A 14-level ">|" catchment buy for $7,806,875, removed level by level, refunded $6,245,716: 80%, with per-level rounding.
+- A removal then ">" on the same tree works; the tooltip's upkeep after removal matched the station's.
+- The first removal refunded $159,982 where the level then cost $99,984: the station still had the upkeep it was built with before TRM: Infrastructure Upkeep was switched on, and the rebuild halved it ([docs/compatibility.md](../compatibility.md), "Overlapping mods").
+
+### 2026-11-07 and 2026-11-08: the TRM fix, both load orders
+
+1974 test saves with TRM: Industry Emissions and TRM: Infrastructure Upkeep at their defaults. Logs: `local/logs/stdout-2026-11-07-trmfirst.txt` (TRM before us), `stdout-2026-11-08-next.txt` (TRM after us). Results and log lines in [docs/compatibility.md](../compatibility.md).
+
+- **162 buys and removals** on road stations, harbours and rail stations, each equal to the card's amount, an `applied` line for every rebuild, no load errors.
+- **Removals beyond rail:** 11 catchment and 9 upkeep removals on a harbour (329843, WATER; its upkeep tree refunds half), 11 catchment removals on a road station (408411), 4 pollution removals on another (463985, ROAD).
+- **Stations placed in session** (a road station and a harbour) showed their cards at once and took levels.
