@@ -2,13 +2,20 @@
 
 ## In short
 
-- **Why probes first.** The method is proven on depots, but a station rebuild touches far more of the game: waiting passengers and cargo, vehicles at the platforms, lines, and many track and road connections. Four probes answer the unknowns in [findings.md](findings.md) before the spec is fixed. Each probe is a small test build of the mod, run by the user in game on a copy of a manual save. Results go into findings.md, and the probe code stays in git history.
-- **Order.** Probe 1 (rebuild a few stations with fixed levels) decides whether the mod is worth building and whether the upkeep tree exists. Probe 2 (the window tab) and probe 3 (rebuilds the game starts) come next. Probe 4 (kerbside stops) decides their scope. Probes 2 and 3 can share one session with probe 1's build.
+- **Why probes first.** The method is proven on depots, but a station rebuild touches far more of the game: waiting passengers and cargo, vehicles at the platforms, lines, and many track and road connections. The probes answer the unknowns in [findings.md](findings.md) before the spec is fixed. Each probe is a small test build of the mod, run by the user in game on a copy of a manual save. Results go into findings.md, and the probe code stays in git history.
+- **Status.** Probes 1 and 2 passed, probe 3 is partly done, probe 4 is dropped (table below). What is left is now tested with the full mod, not a probe build (TODO.md, "To test in game").
 - **How a probe acts.** As in Depot Retrofits: a probe acts by itself once the save loads, with a small cap (a handful of stations), and logs before and after. No buttons, no confirmations; the user tests on a copy of a save.
+
+| Probe | Status | Left |
+|---|---|---|
+| 1. Rebuild with fixed levels | passed (2026-11-01): the mod works and the upkeep tree exists | a vehicle at a platform during a rebuild, waiting cargo, save and load, a refusal |
+| 2. Retrofit card | passed (2026-11-01), now the buy card | a group of two constructions, another mod's card beside ours |
+| 3. Rebuilds the game starts | Configure on road and tram stations, module add, remove and move on a cargo rail station (2026-11-01, 2026-11-05) | an era swap, catenary |
+| 4. Kerbside stops | dropped: out of scope (2026-11-05) | none |
 
 ## Shared setup
 
-- The mod folder (planned name `station_retrofits_1`) is symlinked into the game's `staging_area/`; scripts and `mod.json` need a game restart to reload.
+- The mod folder `station_retrofits_1` is symlinked into the game's `staging_area/`; scripts and `mod.json` need a game restart to reload.
 - Every log line starts with `STATION_RETROFITS` and carries `key=value` fields. Copy `crash_dump/stdout.txt` to `local/logs/` before reading it (it is overwritten at each launch; times are UTC).
 - After a load, check the first lines for `Error while loading game script` before the user plays at speed.
 - Put every unverified API call under `pcall` with a log line as the fallback.
@@ -16,7 +23,7 @@
 
 ## Probe 1: rebuild with fixed levels
 
-**Build.**
+**Build** (as run; the capacity tree was dropped after it, and the upkeep turned out simpler, see findings, "Upkeep scales directly").
 
 - `mod.script.tl` `runFn`: a `loadConstruction` modifier that only declares five params on the base modular rail station, street terminal and harbour (`stationRetrofitsCatchment`, `…Capacity`, `…Pollution`, `…Noise`, `…Upkeep`; values 0 to 15; `yearFrom` 9999) and leaves `updateScript` alone; and a `loadScript` modifier that wraps the `updateFn` of their three base scripts (findings, "Seen in other mods' code"). Skip anything Depot Retrofits wraps.
 - Wrapper: run the original `updateFn`; if `params.modules` and `result.slots` are set, replace `result.terminateConstructionHook` (and every copy of it in the result's tables, for harbours) with one that runs the original once, caches its returns, and then scales, once per result, the station subconstruction (`cargoStation` or `passengerStation`, whichever has a `station` table): every `catchmentAreas[i].radius`, `station.pool.capacity`, each terminal's capacity, both `metadata.emissions` states. Set `result.maintenanceCost` to the levelled total minus the modules' upkeep (`params.modules[*].metadata.maintenanceCost`), and let it go below 0. Scale copies of the tables, multiplying the values found. Log before and after for each value.
@@ -24,7 +31,7 @@
 
 **Snapshot fields.** Construction id; station entity ids and terminal count (`CONSTRUCTION` component, `STATION` components); `api.engine.util.station.calculateStationUsage` (pool capacity, terminal capacity, total used); waiting passengers and cargo per station; lines stopping there (line system) and vehicles at its terminals; catchment radii; emitter noise and pollution (live); the `MAINTENANCE_COST` component and `calcMaintenanceForSubconstruction`; the company balance just before and just after the rebuild lands.
 
-**Answers it gives (pass = yes).**
+**Answers it gives (pass = yes).** Answered: 1, 2, 5, 6 (no negative upkeep needed), 7, 8, 11, 12 (no second call seen), and 3 for passengers; open: 3 for cargo, 4, 9, 10 (findings, test results).
 
 1. The hook wrapper runs after the modules: the logged values before scaling equal the sums from the modules, and after scaling equal the formula.
 2. Station and terminal entity ids, lines and stops survive the rebuild.
@@ -41,7 +48,7 @@
 
 ## Probe 2: Retrofit card in the station window
 
-**Build.** `retrofit_card.res.lua` and `retrofit_card.script.tl`: a react plugin for `::StationGroupEowExtensionPoint` that shows one collapsible Retrofit card per station group: collapsed, a row per tree with the level boxes and what the levels do now; expanded, what the next level changes and the upkeep after it (no buy button yet). Each wrapped construction in the group gets its rows (found with `getConstructionEntityForStation`; a heading per construction when the group holds more than one). Its condition shows the card only for the player's stations with at least one wrapped construction. The game calls a plugin's recipe without checking it exists and calls its condition unguarded (`gui/main/gui_react_util.tl`, `usePlugins`), so the condition never throws and is false when a load failed. Do not set `entityWindowScript`: it would stop the station window from opening. At `"full"` the card logs `card shown group=…` with, per construction, the levels, the number of stations, circles and terminals, the largest circle and the waiting places, once per change; on a big station these show what the card reads on every step.
+**Build** (as run; the card has since gained the buy buttons). `retrofit_card.res.lua` and `retrofit_card.script.tl`: a react plugin for `::StationGroupEowExtensionPoint` that shows one collapsible Retrofit card per station group: collapsed, a row per tree with the level boxes and what the levels do now; expanded, what the next level changes and the upkeep after it (no buy button yet). Each wrapped construction in the group gets its rows (found with `getConstructionEntityForStation`; a heading per construction when the group holds more than one). Its condition shows the card only for the player's stations with at least one wrapped construction. The game calls a plugin's recipe without checking it exists and calls its condition unguarded (`gui/main/gui_react_util.tl`, `usePlugins`), so the condition never throws and is false when a load failed. Do not set `entityWindowScript`: it would stop the station window from opening. At `"full"` the card logs `card shown group=…` with, per construction, the levels, the number of stations, circles and terminals, the largest circle and the waiting places, once per change; on a big station these show what the card reads on every step.
 
 **Pass.** The station window is unchanged and the Retrofit card shows on all three kinds with the levels probe 1 stored (5/5/5/5/5 on the rail and street stations, 0/0/0/0/10 on the harbour, 0/0/0/0/0 elsewhere), on a station placed during the session too, on a group of a station and a terminal joined, not on a kerbside stop or a competitor's station, and next to other mods' cards when they are active. The log has no `Recipe not found` or `card … Error` lines.
 
@@ -49,7 +56,7 @@
 
 By hand, on a levelled station from probe 1: add a platform, remove a module, swap a module's era, switch catenary on a rail station, and on a street terminal swap a module.
 
-**Pass.** Each edit goes through the wrapper (log line) and keeps the five levels; the scaled values match the formula for the new module set; the upkeep is (base + modules) × the level factor.
+**Pass.** Each edit goes through the wrapper (log line) and keeps the levels; the scaled values match the formula for the new module set; the upkeep is the modules' upkeep × the level factor.
 
 ## Probe 4: kerbside stops (dropped)
 

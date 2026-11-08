@@ -4,16 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A planned Transport Fever 3 script mod: stations get levels (catchment radius, pollution, noise, upkeep), bought in the station's window. It is the sibling of Depot Retrofits, the same author's released mod for depots, checked out next to this repo at `../tf3-depot-retrofits` ([WuphonsReach/tf3-depot-retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits), MIT, mod.io id 6495416). This repo starts from that mod's method and code.
+A Transport Fever 3 script mod: stations get levels (catchment radius, pollution, noise, upkeep), bought in the station's window. It is the sibling of Depot Retrofits, the same author's released mod for depots, checked out next to this repo at `../tf3-depot-retrofits` ([WuphonsReach/tf3-depot-retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits), MIT, mod.io id 6495416). This repo starts from that mod's method and code.
 
-**Status: design only.** Read these first, in this order:
+**Status: in development, not released.** Levels, the Retrofit card, buying and removing work in game; what is left is in TODO.md. Read these first, in this order:
 
 1. [TODO.md](TODO.md): where it stands and what comes next.
-2. [docs/design/findings.md](docs/design/findings.md): what is known about stations, with source files, and the unknowns. Read it before changing mechanics.
-3. [docs/design/probe-plan.md](docs/design/probe-plan.md): the in-game probes to run before the spec is fixed.
-4. [docs/design/spec.md](docs/design/spec.md): the draft retrofits and its open decisions.
-5. In `../tf3-depot-retrofits`: its `CLAUDE.md` (architecture of the released mod), `docs/design/findings.md` (the tested facts this plan builds on) and `docs/design/spec.md`.
-6. `local/machine.md` (gitignored, may be missing on another machine): the game paths, saves and screenshot folder on this machine.
+2. [docs/design/findings.md](docs/design/findings.md): what is known about stations, with source files, the unknowns and the in-game test results. Read it before changing mechanics.
+3. [docs/design/spec.md](docs/design/spec.md): the levels, prices and card, the decisions and the open ones.
+4. [docs/compatibility.md](docs/compatibility.md): other mods, the TRM: Industry Emissions fix.
+5. [docs/design/probe-plan.md](docs/design/probe-plan.md): the probes that tested the method, and what is left of them.
+6. In `../tf3-depot-retrofits`: its `CLAUDE.md` (architecture of the released mod), `docs/design/findings.md` (the tested facts this plan builds on) and `docs/design/spec.md`.
+7. `local/machine.md` (gitignored, may be missing on another machine): the game paths, saves and screenshot folder on this machine.
 
 The repo is public on GitHub ([WuphonsReach/tf3-station-retrofits](https://github.com/WuphonsReach/tf3-station-retrofits), MIT); the mod is not on mod.io yet. `main` takes changes only through a pull request: branch from `origin/main` as `<YYYY-MM-DD>-<slug>`, and push or open a PR only when the user asks.
 
@@ -23,19 +24,18 @@ Copied from Depot Retrofits (its `CLAUDE.md`, "CI and repo rules"), which has th
 
 The rulesets have no bypass actors, so they bind the owner too: `main` and `pr-checks` (changes reach `main` only through a PR; `pr-checks` requires `python-checks` and `teal-syntax`, so renaming a job means updating the ruleset in the same change), `trunks` (`main` cannot be deleted or force-pushed), `version-tags` (tags `v*.*` cannot be moved or deleted). Releases are immutable.
 
-## Reusing Depot Retrofits
+## Code layout and Depot Retrofits
 
-Depot Retrofits is MIT and by the same author, so its code may be copied. Its 1.2 layout, and what each file is likely to become here:
+Depot Retrofits is MIT and by the same author, so its code may be copied. The mod (`station_retrofits_1/content/`), and where each file comes from:
 
-| Depot Retrofits (`depot_retrofits_1/content/`) | Here |
-|---|---|
-| `levels.tl` (trees, formulas) | new trees: radius, pollution, noise, upkeep; same price ladder |
-| `company_rank.tl` (rank gate) | as is |
-| `settings.tl` (`logLevel`) | as is |
-| `mod.script.tl` (`loadConstruction` modifier, depot detection) | `loadConstruction` only for the hidden params; a `loadScript` modifier wraps the base station scripts' `updateFn` and the `terminateConstructionHook` it returns (findings, "Seen in other mods' code") |
-| `construction.script.tl` (wrapper) | scale the station subconstruction after the original hook; upkeep may go negative (probe 1) |
-| `retrofits.gs.lua`, `retrofits.script.tl` (buy queue, rebuild, charge) | mostly as is; journal category and the station's carrier |
-| `retrofit_window.script.tl` (Retrofit tab, "Not rebuilt") | a card in the station window's `StationGroupEowExtensionPoint`, not a tab: `entityWindowScript` would stop the station window opening; same widgets |
+| File | What it does | From Depot Retrofits |
+|---|---|---|
+| `core.tl` | trees, formulas, prices, and `wrapUpdate`, the wrapper of a base station script's `updateFn` that scales the station after its `terminateConstructionHook` | `levels.tl` and `construction.script.tl`, reworked |
+| `mod.script.tl` | `runFn`: a `loadConstruction` modifier for the hidden params, a `loadScript` modifier that wraps the three base station scripts; `postRunFn`: the TRM redirect | `mod.script.tl`, reworked |
+| `station_original.script.lua` | the shim TRM: Industry Emissions loads instead of the base script (docs/compatibility.md) | new |
+| `retrofits.gs.lua`, `retrofits.script.tl` | game script: buy and removal queue, rebuild, charge or refund, refusals in state | mostly as is |
+| `retrofit_card.res.lua`, `retrofit_card.script.tl`, `retrofit_card.css.lua` | the Retrofit card in the station window's `StationGroupEowExtensionPoint` (not a tab: `entityWindowScript` would stop the station window opening) | `retrofit_window.script.tl`, same widgets |
+| `company_rank.tl`, `settings.tl` | rank gate, `logLevel` | as is |
 
 Keep the copies independent: this mod must not load files from Depot Retrofits, and neither mod may wrap a construction the other wraps (airports have a hangar depot; see findings).
 
@@ -78,7 +78,7 @@ Base game sources are `.tl` and `.lua` files inside zips under the game's `base/
 
 - The user is WuphonsReach, who has released two TF3 script mods (Best Before, Depot Retrofits). Explain construction and station mechanics briefly; no need to explain the toolchain.
 - When the user asks for a plan only, make no edits until they say go.
-- Branch names start with the date: `<YYYY-MM-DD>-<slug>`. Once the GitHub repo exists, `main` takes changes only through a PR.
+- Branch names start with the date: `<YYYY-MM-DD>-<slug>`. `main` takes changes only through a PR.
 - Ask before any GitHub write (push, PR, repo creation, tag, release). `gh` needs the sandbox off and its output piped to `cat`.
 - Dependent work goes in stacked branches as separate PRs, but one in-game session tests the whole stack.
 - The user may run several agents in one checkout: check the branch and the staged diff before committing, and stage only your own hunks.
