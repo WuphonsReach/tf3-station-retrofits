@@ -35,7 +35,7 @@
 - [ ] Survey the stations of the user's subscribed mods (mod.io folder in `local/machine.md`): does each return a `station` table, use `terminateConstructionHook`, set `constructionType`? Read-only for anything not MIT/BSD/Apache/CC0.
 - [ ] Spec: scope for airports and the underground station; whether to look for what a port does emit (spec, "Open decisions").
 - [ ] "Not rebuilt": show what is in the way (the proposal viewer needs an action area the station window does not give its cards; findings).
-- [ ] User guide, listing text, cover and gallery (collected screenshots in `local/screenshots/`), release process (`docs/publishing.md` from Depot Retrofits).
+- [ ] User guide, listing text, gallery (collected screenshots in `local/screenshots/`), release process (`docs/publishing.md` from Depot Retrofits). The cover is drawn by `tools/make_preview.py`.
 
 ## From the code review (2026-11-03)
 
