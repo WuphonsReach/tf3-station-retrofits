@@ -45,6 +45,9 @@ Keep the copies independent: this mod must not load files from Depot Retrofits, 
 # Type check (needs gitignored tlconfig.lua copied from tlconfig.example.lua, with <tf3_install_folder> filled in)
 export PATH="$HOME/.luarocks/bin:$PATH"; eval "$(luarocks path --local)"
 tl check station_retrofits_1/content/<file>.tl
+
+# Redraw the mod's cover (station_retrofits_1/_metadata/0.jpg, the uploader's Preview slot, and its copy 1-cover.jpg, the first gallery image; 1920x1080; needs rsvg-convert, Pillow and the Lato font)
+python3 tools/make_preview.py [--version 1.0] [--keep-svg local/preview/cover.svg]   # the version goes in the upper right corner, kept clear for it
 ```
 
 There is no build step and no unit tests; the only checks are the type checker, the CI checks once they exist, and testing in the game. The user runs every in-game test. Run `tl check` on each script you touch.
