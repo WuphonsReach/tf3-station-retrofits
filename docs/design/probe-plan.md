@@ -8,9 +8,9 @@
 
 | Probe | Status | Left |
 |---|---|---|
-| 1. Rebuild with fixed levels | passed (2026-11-01): the mod works and the upkeep tree exists | a vehicle at a platform during a rebuild, waiting cargo, save and load, a refusal |
+| 1. Rebuild with fixed levels | passed (2026-11-01): the mod works and the upkeep tree exists | a vehicle at a platform during a rebuild, waiting cargo, a refusal (save and load passed, 2026-11-10 to 2026-11-13) |
 | 2. Retrofit card | passed (2026-11-01), now the buy card | a group of two constructions, another mod's card beside ours |
-| 3. Rebuilds the game starts | Configure on road and tram stations, module add, remove and move on a cargo rail station (2026-11-01, 2026-11-05) | an era swap, catenary |
+| 3. Rebuilds the game starts | Configure on road and tram stations and a passenger rail station, module add, remove and move on a cargo rail station (2026-11-01, 2026-11-05, 2026-11-12) | an era swap, catenary |
 | 4. Kerbside stops | dropped: out of scope (2026-11-05) | none |
 
 ## Shared setup

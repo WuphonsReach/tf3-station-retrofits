@@ -2,8 +2,8 @@
 
 ## In short
 
-- **Where it stands.** Levels, the Retrofit card, buying (">" and ">|") and removing a level ("<") all work in game on rail, road, tram, cargo and harbour stations, charged and refunded to the dollar at the prices the formulas give (results in [docs/design/findings.md](docs/design/findings.md)). Configure (the station's module editor) keeps the levels on road, tram and cargo rail stations. Harbours get only the catchment and upkeep trees, and their upkeep tree costs half. TRM: Industry Emissions is fixed in the dev version ([docs/compatibility.md](docs/compatibility.md)). Kerbside stops are out of scope. Decisions are in [docs/design/spec.md](docs/design/spec.md), "Decisions".
-- **Next.** One in-game session for what is untested (below): an era swap and catenary on a levelled station, a vehicle at a platform during a rebuild, loading a levelled save, a refused rebuild, and the levels with the most used competing mods active. Then the code-review fixes, then the user guide, listing and release.
+- **Where it stands.** Levels, the Retrofit card, buying (">" and ">|") and removing a level ("<") all work in game on rail, road, tram, cargo and harbour stations, charged and refunded to the dollar at the prices the formulas give (results in [docs/design/findings.md](docs/design/findings.md)). Configure (the station's module editor) keeps the levels on road, tram, passenger and cargo rail stations, and levelled stations come back as they were when a save is loaded. Harbours get only the catchment and upkeep trees, and their upkeep tree costs half. TRM: Industry Emissions is fixed in the dev version ([docs/compatibility.md](docs/compatibility.md)). Kerbside stops are out of scope. Decisions are in [docs/design/spec.md](docs/design/spec.md), "Decisions".
+- **Next.** One in-game session for what is untested (below): an era swap and catenary on a levelled station, a vehicle at a platform during a rebuild, a refused rebuild, and the levels with the most used competing mods active. Then the code-review fixes, then the user guide, listing and release.
 
 ## Done
 
@@ -17,11 +17,12 @@
 - `types/station_retrofits.d.tl` and its require in `all_def.tl`.
 - Desk checks: `STATION` as the journal construction; no base station `.con` sets `constructionType`; the rail and street `upgradeFn` keep the other params; how the station window shows catchment and capacity; 13 competing mods read (notes in `local/competitors.md`).
 - Waiting passengers survive rebuilds; the emitter refills after a rebuild, how fast does not matter (findings, 2026-11-05).
+- Save and load of levelled stations: three saves loaded with their levels, circles and upkeep as left, and the station script not run on load; Configure on a levelled passenger rail station (findings, 2026-11-10 to 2026-11-13).
 
 ## To test in game
 
-- [ ] Probe 3 rest: an era swap and catenary keep the levels. Done: Configure on road and tram stations, cargo rail module add, remove and move.
-- [ ] Probe 1 rest: a vehicle at a platform during a rebuild; waiting cargo; save and load of a levelled station (save `WR26A Giga-Tv3 1915 1101-1303-test`, or the 1919 autosave in findings, 2026-11-07).
+- [ ] Probe 3 rest: an era swap and catenary keep the levels. Done: Configure on road and tram stations and a passenger rail station, cargo rail module add, remove and move.
+- [ ] Probe 1 rest: a vehicle at a platform during a rebuild; waiting cargo. Done: save and load of levelled stations (2026-11-10 to 2026-11-13).
 - [ ] Probe 2 rest: a group of two constructions, next to another mod's card. Done: stations placed in session (2026-11-08).
 - [ ] The levels with the most used competing mods active.
 - [ ] A refused rebuild: the "Not rebuilt" banner shows, for a buy, a ">|" buy and a removal (removal wording), and nothing is charged or refunded.

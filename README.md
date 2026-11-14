@@ -7,7 +7,7 @@ A Transport Fever 3 script mod, in development: stations get levels that widen t
 - **Status.** In development, not released. Levels are bought and removed from a Retrofit card in the station window, and work in game on rail, road, tram, cargo and harbour stations.
 - **How it works.** As in Depot Retrofits: the mod wraps each base station script's update function, reads hidden level parameters, and rebuilds the station to apply a level. A modular station sets its catchment and emissions in one hook that runs after all its modules, so the wrapper sees the final values. Harbours get only the catchment and upkeep levels: a port emits no pollution or noise of its own.
 - **How sure.** The station facts are read from the game's own scripts; buying, removing and the levels' effects are tested in game, one fix for TRM: Industry Emissions included ([docs/compatibility.md](docs/compatibility.md)).
-- **Unknown.** What a rebuild does to vehicles at the platforms, whether era and catenary swaps keep the levels, and loading a save with levelled stations ([TODO.md](TODO.md)).
+- **Unknown.** What a rebuild does to vehicles at the platforms, and whether era and catenary swaps keep the levels ([TODO.md](TODO.md)).
 
 ## Notes
 
