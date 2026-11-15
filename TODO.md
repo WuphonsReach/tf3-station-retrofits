@@ -2,8 +2,8 @@
 
 ## In short
 
-- **Where it stands.** Levels, the Retrofit card, buying (">" and ">|") and removing a level ("<") all work in game on rail, road, tram, cargo and harbour stations, charged and refunded to the dollar at the prices the formulas give (results in [docs/design/findings.md](docs/design/findings.md)). Configure (the station's module editor) keeps the levels on road, tram, passenger and cargo rail stations, and levelled stations come back as they were when a save is loaded. Harbours get only the catchment and upkeep trees, and their upkeep tree costs half. TRM: Industry Emissions is fixed in the dev version ([docs/compatibility.md](docs/compatibility.md)). Kerbside stops are out of scope. Decisions are in [docs/design/spec.md](docs/design/spec.md), "Decisions".
-- **Next.** One in-game session for what is untested (below): an era swap and catenary on a levelled station, a vehicle at a platform during a rebuild, a refused rebuild, and the levels with the most used competing mods active. Then the code-review fixes, then the user guide, listing and release.
+- **Where it stands.** Levels, the Retrofit card, buying (">" and ">|") and removing a level ("<") all work in game on rail, road, tram, cargo and harbour stations, charged and refunded to the dollar at the prices the formulas give (results in [docs/design/findings.md](docs/design/findings.md)). Configure (the station's module editor) keeps the levels on road, tram, passenger and cargo rail stations, and levelled stations come back as they were when a save is loaded. When the game refuses a rebuild, the card shows "Not rebuilt" and nothing is charged (seen for ">|" buys). Harbours get only the catchment and upkeep trees, and their upkeep tree costs half. TRM: Industry Emissions is fixed in the dev version ([docs/compatibility.md](docs/compatibility.md)). Kerbside stops are out of scope. Decisions are in [docs/design/spec.md](docs/design/spec.md), "Decisions".
+- **Next.** One in-game session for what is untested (below): an era swap and catenary on a levelled station, a vehicle at a platform during a rebuild, a refused ">" buy and a refused removal, and the levels with the most used competing mods active. Then the code-review fixes, then the user guide, listing and release.
 
 ## Done
 
@@ -18,6 +18,7 @@
 - Desk checks: `STATION` as the journal construction; no base station `.con` sets `constructionType`; the rail and street `upgradeFn` keep the other params; how the station window shows catchment and capacity; 13 competing mods read (notes in `local/competitors.md`).
 - Waiting passengers survive rebuilds; the emitter refills after a rebuild, how fast does not matter (findings, 2026-11-05).
 - Save and load of levelled stations: three saves loaded with their levels, circles and upkeep as left, and the station script not run on load; Configure on a levelled passenger rail station (findings, 2026-11-10 to 2026-11-13).
+- Refused rebuilds: two ">|" buys refused by the game (a passenger rail station, a harbour), the "Not rebuilt" banner shown, nothing charged; removals on a tram station; 13 levels in one rebuild on rail, road, tram and harbour stations (findings, 2026-11-15).
 
 ## To test in game
 
@@ -25,9 +26,9 @@
 - [ ] Probe 1 rest: a vehicle at a platform during a rebuild; waiting cargo. Done: save and load of levelled stations (2026-11-10 to 2026-11-13).
 - [ ] Probe 2 rest: a group of two constructions, next to another mod's card. Done: stations placed in session (2026-11-08).
 - [ ] The levels with the most used competing mods active.
-- [ ] A refused rebuild: the "Not rebuilt" banner shows, for a buy, a ">|" buy and a removal (removal wording), and nothing is charged or refunded.
+- [ ] A refused rebuild, the rest: a ">" buy and a removal (removal wording), nothing charged or refunded. Done: two ">|" buys (2026-11-15).
 - [ ] The card at a larger font setting, on a harbour (the one-line layout still fits).
-- [ ] Removing a level, the rest: how the Finances tab shows the positive station construction entry; "<" greyed at level 0 and working above the rank; a tram station.
+- [ ] Removing a level, the rest: how the Finances tab shows the positive station construction entry; "<" working above the rank. Done: "<" greyed at level 0 (2026-11-10), a tram station (2026-11-15).
 - [ ] Buying: a harbour that lands slower than a game day at 4x (the game script waits 30 real seconds); buying while the game runs.
 
 ## Still to do
@@ -35,8 +36,8 @@
 - [ ] Decide how levels are priced with a mod that scales station upkeep (TRM: Infrastructure Upkeep; spec, "Open decisions").
 - [ ] Survey the stations of the user's subscribed mods (mod.io folder in `local/machine.md`): does each return a `station` table, use `terminateConstructionHook`, set `constructionType`? Read-only for anything not MIT/BSD/Apache/CC0.
 - [ ] Spec: scope for airports and the underground station; whether to look for what a port does emit (spec, "Open decisions").
-- [ ] "Not rebuilt": show what is in the way (the proposal viewer needs an action area the station window does not give its cards; findings).
-- [ ] User guide, gallery (collected screenshots in `local/screenshots/`), release process (`docs/publishing.md` from Depot Retrofits). The cover is drawn by `tools/make_preview.py`; the listing text is in `_metadata/modinfo.json` (check its "Not checked yet" and "Not rebuilt" lines against the last tests before release).
+- [ ] "Not rebuilt": show what is in the way (the proposal viewer needs an action area the station window does not give its cards; findings). The banner always says "a building, road or track is in the way", but a harbour was refused for "Place on Shoreline" (findings, 2026-11-15): word the banner and the listing's "Not rebuilt" line for any cause.
+- [ ] User guide, gallery (16 screenshots collected in `local/screenshots/`; still to shoot listed in its README), release process (`docs/publishing.md` from Depot Retrofits). The cover is drawn by `tools/make_preview.py`; the listing text is in `_metadata/modinfo.json` (check its "Not checked yet" and "Not rebuilt" lines against the last tests before release).
 
 ## From the code review (2026-11-03)
 
