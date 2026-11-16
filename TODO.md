@@ -2,8 +2,8 @@
 
 ## In short
 
-- **Where it stands.** Levels, the Retrofit card, buying (">" and ">|") and removing a level ("<") all work in game on rail, road, tram, cargo and harbour stations, charged and refunded to the dollar at the prices the formulas give (results in [docs/design/findings.md](docs/design/findings.md)). Configure (the station's module editor) keeps the levels on road, tram, passenger and cargo rail stations, and levelled stations come back as they were when a save is loaded. When the game refuses a rebuild, the card shows "Not rebuilt" and nothing is charged (seen for ">|" buys). Harbours get only the catchment and upkeep trees, and their upkeep tree costs half. TRM: Industry Emissions is fixed in the dev version ([docs/compatibility.md](docs/compatibility.md)). Kerbside stops are out of scope. Decisions are in [docs/design/spec.md](docs/design/spec.md), "Decisions".
-- **Next.** One in-game session for what is untested (below): an era swap and catenary on a levelled station, a vehicle at a platform during a rebuild, a refused ">" buy and a refused removal, and the levels with the most used competing mods active. Then the code-review fixes, then the user guide, listing and release.
+- **Where it stands.** Levels, the Retrofit card, buying (">" and ">|") and removing a level ("<") all work in game on rail, road, tram, cargo and harbour stations, charged and refunded to the dollar at the prices the formulas give (results in [docs/design/findings.md](docs/design/findings.md)). Configure (the station's module editor) keeps the levels on road, tram, passenger and cargo rail stations, and levelled stations come back as they were when a save is loaded. When the game refuses a rebuild, the card shows "Not rebuilt" and nothing is charged (seen for ">|" buys). Harbours get only the catchment and upkeep trees, and their upkeep tree costs half. TRM: Industry Emissions is fixed in the dev version ([docs/compatibility.md](docs/compatibility.md)). Kerbside stops are out of scope. Airports, airfields, heliports and helipads are next: this mod owns them, hangar depots included (decided 2026-11-16; spec, "Air buildings"). Decisions are in [docs/design/spec.md](docs/design/spec.md), "Decisions".
+- **Next.** One in-game session for what is untested (below): an era swap and catenary on a levelled station, a vehicle at a platform during a rebuild, a refused ">" buy and a refused removal, and the levels with the most used competing mods active. Then the code-review fixes, then the user guide, listing and release. Air buildings: probe 5, then decide the hangar trees' prices and what happens with several hangars, then the card rows and the buy path.
 
 ## Done
 
@@ -35,7 +35,17 @@
 
 - [ ] Decide how levels are priced with a mod that scales station upkeep (TRM: Infrastructure Upkeep; spec, "Open decisions").
 - [ ] Survey the stations of the user's subscribed mods (mod.io folder in `local/machine.md`): does each return a `station` table, use `terminateConstructionHook`, set `constructionType`? Read-only for anything not MIT/BSD/Apache/CC0.
-- [ ] Spec: scope for airports and the underground station; whether to look for what a port does emit (spec, "Open decisions").
+- [ ] Spec: scope for the underground station; whether to look for what a port does emit (spec, "Open decisions").
+
+## Air buildings
+
+Airports, airfields, heliports and helipads, hangar depots included (decided 2026-11-16). Spec, "Air buildings"; findings, "Air buildings"; probe plan, probe 5.
+
+- [ ] Probe 5: wrap the four air scripts, level the hangar depots in the wrapped hook, see which tabs the window shows and where the card lands.
+- [ ] Decide what the hangar trees' prices are based on, and one set of hangar levels for the whole airport or levels per hangar (spec, open decisions 4 and 5), with what probe 5 shows.
+- [ ] The hangar rows on the card (only where there is a hangar depot), the buy and removal path for the two hangar trees, the carrier for the journal entry (AIR).
+- [ ] The listing's "Not covered" line and the user guide, once air buildings ship.
+- [ ] In-game session: buys and removals on each air building, Configure, era templates, save and load.
 - [ ] "Not rebuilt": show what is in the way (the proposal viewer needs an action area the station window does not give its cards; findings). The banner always says "a building, road or track is in the way", but a harbour was refused for "Place on Shoreline" (findings, 2026-11-15): word the banner and the listing's "Not rebuilt" line for any cause.
 - [ ] User guide, gallery (16 screenshots collected in `local/screenshots/`; still to shoot listed in its README), release process (`docs/publishing.md` from Depot Retrofits). The cover is drawn by `tools/make_preview.py`; the listing text is in `_metadata/modinfo.json` (check its "Not checked yet" and "Not rebuilt" lines against the last tests before release).
 

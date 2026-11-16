@@ -4,7 +4,7 @@
 
 Stations get levels, bought in the station's own window (one at a time, or all the rank and the money allow in one click) and removable one at a time for an 80% refund, the way [Depot Retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits) does it for depots. The trees, prices and card below are decided ("Decisions") and built; the spec stays a draft until the open decisions at the end are made and the last in-game tests pass. Buying and removing levels are tested in game on rail, road, tram, cargo and harbour stations, and the levels survive save and load (findings, test results). Not yet tested: an era swap or catenary change on a levelled station, a vehicle at a platform during a rebuild, and a refused rebuild.
 
-The first version has three trees of 15 levels each (catchment radius, pollution, noise), plus an upkeep tree. Harbours get only the catchment and upkeep trees: a port emits no pollution or noise of its own (findings, 2026-11-05). Waiting capacity is not a tree: players already add it by building more station modules, and mods with larger stops or modules cover the rest. It covers the base modular stations (rail, road and tram terminals, harbours) and later stations from other mods that have the same shape. A tree's highest level is the company's claimed rank. A level is applied by rebuilding the station with new hidden params, as for depots.
+The first version has three trees of 15 levels each (catchment radius, pollution, noise), plus an upkeep tree. Harbours get only the catchment and upkeep trees: a port emits no pollution or noise of its own (findings, 2026-11-05). Waiting capacity is not a tree: players already add it by building more station modules, and mods with larger stops or modules cover the rest. It covers the base modular stations (rail, road and tram terminals, harbours) and later stations from other mods that have the same shape. Airports, airfields, heliports and helipads come next: this mod owns them outright, their hangar depots included, and Depot Retrofits leaves them alone (decided 2026-11-16, "Air buildings" below). A tree's highest level is the company's claimed rank. A level is applied by rebuilding the station with new hidden params, as for depots.
 
 ## Scope
 
@@ -13,7 +13,8 @@ The first version has three trees of 15 levels each (catchment radius, pollution
 | Train station | yes | modular, values in `terminateConstructionHook` |
 | Road and tram terminal | yes | same |
 | Harbour | yes, catchment and upkeep only | same; its station emits no pollution or noise, so those trees would do nothing (findings, 2026-11-05) |
-| Airport, airfield, heliport | later | also contain a depot (hangar); keep them apart from Depot Retrofits first |
+| Airport, airfield, heliport | next, with two hangar trees | modular, values in `terminateConstructionHook`; their hangar depots are levelled here too, Depot Retrofits never wraps them (decided 2026-11-16, "Air buildings") |
+| Helipad | next, the station trees | not modular and has no depot: values set by the update script, scaled at once as there is no hook |
 | Underground station | maybe | not modular; upkeep set by the script, so the upkeep tree would work as for depots |
 | Kerbside bus and tram stops | no | out of scope for this mod (decided 2026-11-05); they are edge objects and get no card |
 | Warehouse | no | holds stocks, not a station pool |
@@ -94,9 +95,20 @@ Notes:
 
 As in Depot Retrofits: a tree's maximum level is the claimed company rank; no level can be bought while the rank cannot be read.
 
+## Air buildings (draft)
+
+Not built yet. The facts behind this section are in findings, "Air buildings"; none is tested in game.
+
+- **Who owns them.** Station Retrofits levels airports, airfields, heliports and helipads, hangar included; Depot Retrofits never wraps them (decided 2026-11-16). They are mostly station: the build price and upkeep are the sum of all modules (heliport: the script's $50,000 plus its landing modules), and the emissions are set in `terminateConstructionHook`. Depot levels would be priced off the runways and terminals, and Depot Retrofits' `entityWindowScript` would stop the station window from opening.
+- **Station trees.** Catchment, pollution, noise and upkeep as on the other stations, covering the whole building: a hangar's upkeep and emissions are part of the module sums.
+- **Hangar trees.** Two more trees, only on a building with a hangar depot (airports and airfields built with one, every heliport): maintenance radius and vehicles maintained, with Depot Retrofits' steps (radius +5% a level, at least +10 m; vehicles +10% a level, at least one vehicle; Depot Retrofits' spec has the reasons). They act in the wrapped hook, on a copy of each depot table, after the original hook has run. Each adds 15% of its base upkeep a level, as in Depot Retrofits. Their base upkeep and price (open decision 4) and whether they act on every hangar or on one (open decision 5) are open.
+- **Airports and airfields without a hangar, and helipads,** get the four station trees only.
+- **Where the card shows.** By the window code (findings, "Air buildings"), an airport with hangars opens a window with tabs: a "Runway" tab with the base station window, where the Retrofit card shows as on other stations, and a "Depot" tab per hangar with the base depot window. The depot window has its own plugin point (`::MaintenanceStationEowExtensionPoint`), so the hangar trees could show there instead, or on both. To be seen in game first (probe 5).
+
 ## Decisions
 
 - A separate mod, not part of Depot Retrofits: own listing, own balance, a failure in one does not break the other.
+- Airports, airfields, heliports and helipads belong to this mod, hangar depots included; Depot Retrofits does not wrap them, now or later, so no building is wrapped by both mods (decided 2026-11-16; "Air buildings").
 - Name "Station Retrofits", folder `station_retrofits_1`, log prefix `STATION_RETROFITS` (mod.io checked 2026-11-01: no clash).
 - Catchment is in: +3% per level, at least +5 m, first-level share 0.20.
 - Waiting capacity is out: more station modules, or mods with larger stops or modules, already add it.
@@ -110,4 +122,10 @@ As in Depot Retrofits: a tree's maximum level is the claimed company rank; no le
 
 1. Whether to look for what a port does emit (its ships' own pollution and noise are vehicle emissions, which no tree touches) and give harbours those levels.
 2. How to price levels with a mod that scales station upkeep. Prices come from the upkeep the game charges, so TRM: Infrastructure Upkeep (50% by default) halves every price and refund, and a station keeps its old upkeep until its next rebuild ([../compatibility.md](../compatibility.md), "Overlapping mods"). Pricing from the modules' own upkeep would avoid that, but the card cannot read it without the hook. The other option is to leave it: such a mod makes every station cheaper to run, and the levels with it.
-3. Scope: airports, airfields and heliports (they contain a hangar depot; keep them apart from Depot Retrofits) and the underground station (not modular).
+3. Scope: the underground station (not modular; its upkeep is set by the script, so the upkeep tree would work as for depots).
+4. **What the hangar trees' prices and upkeep are based on.** Suggested: the hangars' own upkeep ($150,000 a year per airport hangar, so times the number of hangars; $100,000 for the airfield's one depot; the heliport's $50,000 base), times 6 for the build price, with Depot Retrofits' shares (0.15 at level 1, ×1.15 a level). The other choice is the whole building's build price, as the station trees use, which makes a vehicles level on a large airport cost far more than one hangar's gain is worth. Depends on decision 5.
+5. **Several hangars on one airport.** Every airport hangar is its own depot (its own subconstruction and its own "Depot" tab); an airfield's hangars share one depot. The choices:
+   - *One set of hangar levels for the whole airport,* applied to every hangar depot, priced off the sum of the hangars' upkeep, shown as rows on the station card (and perhaps the same card in each "Depot" tab). One hidden param per tree, as now. Suggested.
+   - *Levels per hangar,* with a card in each "Depot" tab. The window allows it, but the levels would need hidden params per hangar slot (an airport has up to two rows of 25 hangar slots), held by the slot: a hangar moved in Configure would lose its levels and a hangar placed in its old slot would get them. The price would be one hangar's upkeep.
+
+   Decide after probe 5 shows the window in game.

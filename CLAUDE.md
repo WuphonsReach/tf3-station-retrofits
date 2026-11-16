@@ -37,7 +37,7 @@ Depot Retrofits is MIT and by the same author, so its code may be copied. The mo
 | `retrofit_card.res.lua`, `retrofit_card.script.tl`, `retrofit_card.css.lua` | the Retrofit card in the station window's `StationGroupEowExtensionPoint` (not a tab: `entityWindowScript` would stop the station window opening) | `retrofit_window.script.tl`, same widgets |
 | `company_rank.tl`, `settings.tl` | rank gate, `logLevel` | as is |
 
-Keep the copies independent: this mod must not load files from Depot Retrofits, and neither mod may wrap a construction the other wraps (airports have a hangar depot; see findings).
+Keep the copies independent: this mod must not load files from Depot Retrofits, and neither mod may wrap a construction the other wraps (airports, airfields and heliports contain hangar depots and belong to this mod; see findings).
 
 ## Commands
 

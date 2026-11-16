@@ -3,7 +3,7 @@
 ## In short
 
 - **Why probes first.** The method is proven on depots, but a station rebuild touches far more of the game: waiting passengers and cargo, vehicles at the platforms, lines, and many track and road connections. The probes answer the unknowns in [findings.md](findings.md) before the spec is fixed. Each probe is a small test build of the mod, run by the user in game on a copy of a manual save. Results go into findings.md, and the probe code stays in git history.
-- **Status.** Probes 1 and 2 passed, probe 3 is partly done, probe 4 is dropped (table below). What is left is now tested with the full mod, not a probe build (TODO.md, "To test in game").
+- **Status.** Probes 1 and 2 passed, probe 3 is partly done, probe 4 is dropped, probe 5 (air buildings) is planned (table below). What is left is now tested with the full mod, not a probe build (TODO.md, "To test in game").
 - **How a probe acts.** As in Depot Retrofits: a probe acts by itself once the save loads, with a small cap (a handful of stations), and logs before and after. No buttons, no confirmations; the user tests on a copy of a save.
 
 | Probe | Status | Left |
@@ -12,6 +12,7 @@
 | 2. Retrofit card | passed (2026-11-01), now the buy card | a group of two constructions, another mod's card beside ours |
 | 3. Rebuilds the game starts | Configure on road and tram stations and a passenger rail station, module add, remove and move on a cargo rail station (2026-11-01, 2026-11-05, 2026-11-12) | an era swap, catenary |
 | 4. Kerbside stops | dropped: out of scope (2026-11-05) | none |
+| 5. Air buildings | planned (2026-11-16) | all of it |
 
 ## Shared setup
 
@@ -65,6 +66,28 @@ Kerbside stops are out of scope for this mod (decided 2026-11-05), so this probe
 **Build.** Wrap the kerbside stop script (`street/small_stops/small_stops.script`; scale straight away, as stops have no hook), scale the `streetTerminal` capacity and catchment radius, and have the game script rebuild one stop with `replaceSegment` and a new `SimpleStreetProposal.EdgeObject` carrying the copied params (the method other mods use). Note: one mod replaces the stop script outright (last wins), so a stop tree may not reach every player.
 
 **Pass.** The proposal is accepted and the stop keeps its street, lines and waiting passengers. If the API refuses an edge object, or the stop is removed and placed again with new ids, leave stops out of scope.
+
+## Probe 5: air buildings
+
+Airports, airfields, heliports and helipads, hangar depots included (spec, "Air buildings"; findings, "Air buildings"). A probe build, not the card: the hangar trees are not on the card yet.
+
+**Build.**
+
+- `mod.script.tl`: declare the hidden params on the air constructions, and the two hangar trees' params (radius, vehicles), as for the other stations; wrap `air/airport.script`, `air/airfield.script`, `air/heliport/heliport.script` and `air/helipad/helipad.script` through the `loadScript` modifier. The helipad has no hook: scale it at once.
+- `core.wrapUpdate`: in the wrapped hook, after the original has run, scale the station trees on every station subconstruction as now, and on every subconstruction with a `depot` table replace the table with a copy whose `maintenancePool` and `catchmentArea.radius` are levelled (Depot Retrofits' `levels.pool` and `levels.radius`, copied). Log each depot before and after (subconstruction index, pool, radius) at `"full"`.
+- Game script: once per save, as probe 1 did, rebuild up to one air building of each kind with every station tree at 5 and both hangar trees at 5, with a full copy of its params, and log a snapshot before, after 1 game hour and after 1 day: the station values as in probe 1, and for each `VEHICLE_DEPOT` component in the construction its pool and radius.
+- The Retrofit card as it is: watch where it lands.
+
+**Ask the user to place or open:** an airport with no hangar, one with one hangar and one with two or more, an airfield with a hangar, a heliport and a helipad; open each window, click a hangar, and open Configure on a levelled airport.
+
+**Pass.**
+
+1. The window: which tabs each building shows, which tab a click on a hangar opens, and whether the Retrofit card shows in the "Runway" or "Helipad" tab (findings expect it there and not in the "Depot" tabs).
+2. Every depot's pool and radius in the game's `VEHICLE_DEPOT` components equal the formula: each airport hangar levelled, the airfield's one depot levelled once.
+3. A second build of the same building (Configure preview, an unchanged rebuild) does not level the depots again (the depot tables come from the module files by reference).
+4. The station trees act as on the other stations: the 300 m main-building circle (175 m heliport, 100 m helipad), emissions, upkeep.
+5. Configure on a levelled airport keeps the levels (`preProcessFn`), and the rebuild keeps the era template's params.
+6. No `Error while loading game script`, no `hookAgain`, no second run of the heliport hook (it adds to the emissions in place).
 
 ## Later (not planned)
 
