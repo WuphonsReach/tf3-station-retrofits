@@ -173,13 +173,16 @@ end
 -- waits for the clicked tree, not for any change: a level of another tree landing just after the click let a second click
 -- through, sent with the old level (the game script refused it as stale).
 --
--- The game gives no word of a refused rebuild, so the game script gives a rebuild 30 real seconds to land and then records
--- it for the click as "notLanded", uncharged. On that verdict the card says the station was not rebuilt (nothing is charged
--- or refunded then), until a level lands. It waits for the verdict rather than guessing sooner: with its own 10-second wait
--- the card said "Nothing was charged" for a rebuild held up longer (by an autosave, say) that the game script then charged.
--- A click while the banner shows keeps it up, so a retry the game refuses again does not make it blink.
+-- The game gives no word of a refused rebuild: when the clicked tree has not moved about ten seconds after the click, the
+-- card says the station was not rebuilt (nothing is charged or refunded then), until a level lands. The game script waits
+-- longer (30 seconds) before it gives the rebuild up, so a rebuild that landed late would still be charged; the level then
+-- goes up and the banner clears, so the card ends up showing what was charged. No rebuild has landed that late: rail and
+-- road stations land within a second, harbours in 2 to 3 seconds, and an autosave holds up the game script before it sends
+-- the rebuild, not after (docs/design/findings.md, 2026-11-07). A click while the banner shows keeps it up, so a retry the
+-- game refuses again does not make it blink; a retry of the same level replaces the pending one in the game script, and a
+-- buy of another tree is refused there until the first has landed or been given up.
 --
--- A buy the game script itself refused never reaches the game, and the game script keeps that reason for the click too:
+-- A buy the game script itself refused never reaches the game, and the game script keeps the reason for the click:
 -- refused for want of money (the balance can fall between the card's last read and the game script's check), the card says
 -- so instead, until the next click, a new level, or once it has shown for about 10 seconds and the money covers the clicked
 -- level again (see readShort); other reasons (rank, stale, a rebuild still pending) show nothing. Kept per construction for
@@ -210,13 +213,14 @@ local shortForSteps = 600
 local clicks = 0
 local refused : {Engine.Entity : string} = {} -- the levels when the buy was found refused; cleared by a new level
 local refusedDown : {Engine.Entity : boolean} = {} -- whether that buy was a removal, for the banner's wording
--- Only when the game script gives no verdict (its state cannot be read, a save from before the verdict, a game script that
--- failed): the game script's 30 seconds (retrofits.script.tl, buyPendingSeconds) from its taking up the buy, plus the 3
--- seconds that took with the processor busy (docs/design/findings.md) and some margin. The card's steps are no measure of
--- time (Depot Retrofits' findings: at the fastest speed 45 steps passed before a rebuild that landed in the same second);
--- the step count is only for where os.time is not available.
-local refusedAfterSeconds = 40
-local refusedAfterSteps = 2400
+-- Nine to ten seconds: ten ticks of os.time, as the game API has no finer clock. The wait runs from the click, so it covers
+-- the game script taking up the buy as well as the build: harbours took 2 to 3 seconds to build, and with the processor
+-- busy the game script took up a buy 3 seconds after the click, which used up a 5-tick wait (docs/design/findings.md). A
+-- real refusal shows that much later. The card's steps are no measure of time (Depot Retrofits' findings: at the fastest
+-- speed 45 steps passed before a rebuild that landed in the same second); the step count is only for where os.time is not
+-- available.
+local refusedAfterSeconds = 10
+local refusedAfterSteps = 600
 local stepCount = 0
 -- Real time in whole seconds. Not os.clock: that is the process's processor time, summed over the game's threads.
 local clockNow = function() : number, boolean
@@ -237,7 +241,7 @@ end
 local scriptErrorLogged = false
 
 -- The game script's reason for refusing the click's buy ("noMoney", "rank" and so on), or nil while it has given none.
--- Looked up each time, not kept: the entity is the save's. Only read while a click waits, so about 30 seconds at a time.
+-- Looked up each time, not kept: the entity is the save's. Only read while a click waits, so at most ten seconds at a time.
 local scriptRefusal = function(construction : Engine.Entity, click : integer) : string
 	local entity = api.engine.system.gameScriptSystem.getEntityForGameScript(gameScriptName)
 	local component = api.engine.getComponent(entity, api.type.ComponentType.GAME_SCRIPT) as Engine.Component.GameScript<ScriptState>
@@ -255,8 +259,8 @@ local moved = function(try : Try, levels : {string : integer}) : boolean
 	return level > try.from
 end
 
--- Whether the construction's last buy was refused by the game: the clicked tree did not move and the game script gave it up
--- as "notLanded" (or gave no verdict within refusedAfterSeconds). Called once per construction on each of the card's steps.
+-- Whether the construction's last buy was refused by the game: the clicked tree did not move within the wait after the
+-- click, and the game script did not refuse it itself. Called once per construction on each of the card's steps.
 local readRefused = function(construction : Engine.Entity, levels : {string : integer}) : boolean
 	stepCount = stepCount + 1
 	local current = core.describe(levels)
@@ -275,13 +279,6 @@ local readRefused = function(construction : Engine.Entity, levels : {string : in
 		local now, isClock = clockNow()
 		if moved(try, levels) then
 			tries[construction] = nil
-		elseif reason == "notLanded" then
-			tries[construction] = nil
-			refused[construction] = current
-			refusedDown[construction] = try.down
-			say("card notRebuilt construction=" .. tostring(construction) .. " tree=" .. try.tree .. " levels=" .. current
-				.. " direction=" .. (try.down and "down" or "up") .. " verdict=notLanded"
-				.. " waited=" .. tostring(now - try.at) .. " clock=" .. tostring(isClock))
 		elseif reason ~= nil then
 			tries[construction] = nil
 			if reason == "noMoney" then
@@ -295,7 +292,7 @@ local readRefused = function(construction : Engine.Entity, levels : {string : in
 			refused[construction] = current
 			refusedDown[construction] = try.down
 			say("card notRebuilt construction=" .. tostring(construction) .. " tree=" .. try.tree .. " levels=" .. current
-				.. " direction=" .. (try.down and "down" or "up") .. " verdict=none"
+				.. " direction=" .. (try.down and "down" or "up")
 				.. " waited=" .. tostring(now - try.at) .. " steps=" .. tostring(stepCount - try.step) .. " clock=" .. tostring(isClock))
 		end
 	end
@@ -661,7 +658,7 @@ end
 -- Sends a buy for levels level + 1 to target, or with target level - 1 a removal of the top level (price is then the
 -- refund shown). No "buying" state: the rebuild lands within a second, paused or not, and the card redraws with the new
 -- level. A second click before that is ignored (tries), and the game script refuses a stale level, so nothing is charged or
--- refunded twice. A rebuild the game refuses shows as the yellow banner about 30 seconds later (readRefused); the buttons
+-- refunded twice. A rebuild the game refuses shows as the yellow banner about ten seconds later (readRefused); the buttons
 -- stay, so the buy can be sent again.
 local sendBuy = function(construction : Engine.Entity, tree : string, level : integer, target : integer, price : integer)
 	-- One buy at a time per station: a second click before the first lands or is refused is ignored.
