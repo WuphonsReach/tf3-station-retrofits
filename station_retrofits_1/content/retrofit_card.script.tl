@@ -484,16 +484,18 @@ local bannerStyles : {string : StyleSheet} = nil
 local caution = { 1, 0.769, 0.047 }
 local refusedIcon = "::/game_mechanics/notifications/gui/icons/building_industry_bulldozer.tga"
 -- Worded for any cause: mostly something built next to the station, but a harbour was refused for "Place on Shoreline"
--- (docs/design/findings.md, 2026-11-15), and the card cannot tell which.
+-- (docs/design/findings.md, 2026-11-15), and the card cannot tell which. A line does not wrap: at the default font about 55
+-- characters fit beside the icon, and a 66-character line was cut off (2026-11-21), so each line stays at 42 or fewer, with
+-- room for a larger font setting.
 local refusedLines = {
-	"Not rebuilt: the game refused to rebuild the station.",
+	"Not rebuilt: the game refused the rebuild.",
 	"Nothing was charged.",
-	"Often a building, road or track is in the way: clear it and retry.",
+	"Clear anything in the way and try again.",
 }
 local refusedDownLines = {
-	"Not rebuilt: the game refused to rebuild the station.",
-	"The level was kept and nothing was refunded.",
-	"Often a building, road or track is in the way: clear it and retry.",
+	"Not rebuilt: the game refused the rebuild.",
+	"The level was kept, nothing was refunded.",
+	"Clear anything in the way and try again.",
 }
 -- The dollar of the base task reward notification (mission/notification.script.tl).
 local shortIcon = "::/game_mechanics/notifications/gui/icons/symbol_dollar.tga"
