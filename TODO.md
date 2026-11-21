@@ -27,8 +27,8 @@ Scope: train stations, road and tram stations and harbours, as the listing and t
 Before the release branch:
 
 - [x] Code-review fix 2 in code (2026-11-21), not tested in game: a buy for a station with a pending rebuild replaces it only for the same tree, level and direction, any other is refused as `pending` (spec, "Removing a level", "One rebuild at a time per station"). Fix 1 won't be done (below).
-- [x] "Not rebuilt" worded for any cause (2026-11-21): "Not rebuilt: the game refused the rebuild.", then "Nothing was charged." or "The level was kept, nothing was refunded.", then "Clear anything in the way and try again."; 42 characters a line at most, as a 66-character third line was cut off in game (findings, 2026-11-21). The shorter lines are not seen in game yet.
-- [ ] In game, the rest (2026-11-21 done: a refused ">" buy on a rail station with the banner after 10 seconds, its retry replacing the pending buy, given up after 30 seconds uncharged; 72 buys and removals on 8 rail and road stations, each charged or refunded once): the shortened banner fits, also on a harbour; a refused ">|" buy and a refused removal; a click on another tree while the banner shows, refused as `pending`; a buy at 4x.
+- [x] "Not rebuilt" worded for any cause (2026-11-21): "Not rebuilt: the game refused it.", then "Nothing was charged." or "The level was kept, no refund.", then "Clear anything in the way, retry."; 35 characters a line at most, as about 40 fit at Text Scaling "Large" (findings, 2026-11-21). The "Not bought" note's first line is cut to "Not bought: not enough money." for the same reason. Neither is seen in game yet.
+- [ ] In game, the rest (2026-11-21 done: a refused ">" buy on a rail station with the banner after 10 seconds, its retry replacing the pending buy, given up after 30 seconds uncharged; 72 buys and removals on 8 rail and road stations, each charged or refunded once): the 35-character banner fits at Text Scaling "Large", also on a harbour; a refused ">|" buy and a refused removal; a click on another tree while the banner shows, refused as `pending`; a buy at 4x.
 - [ ] Gallery: pick the pictures after `1-cover.jpg` from `local/screenshots/` (or shoot the missing ones: its README), crop the windows tight for `tools/make_gallery.py`, write them to `_metadata/` as `<n>-<name>.jpg`, and record the command in that tool's docstring (publishing.md, "Gallery").
 
 On the release branch (`<YYYY-MM-DD>-release-1.0`):
@@ -44,7 +44,7 @@ On the release branch (`<YYYY-MM-DD>-release-1.0`):
 - [ ] Probe 2 rest: a group of two constructions, next to another mod's card. Done: stations placed in session (2026-11-08).
 - [ ] The levels with the most used competing mods active.
 - [ ] A refused rebuild, the rest: a ">" buy and a removal (removal wording), nothing charged or refunded. Done: two ">|" buys (2026-11-15).
-- [ ] The card at a larger font setting, on a harbour (the one-line layout still fits).
+- [ ] The expanded card at Text Scaling "Large": the catchment row ("150 -> 155 m" and "$1,052,250/Year") pushes its ">|" button off the card, and the other rows nearly touch the edge (findings, 2026-11-21). Fits at "Small". Still to see: a harbour at "Large".
 - [ ] Removing a level, the rest: how the Finances tab shows the positive station construction entry; "<" working above the rank. Done: "<" greyed at level 0 (2026-11-10), a tram station (2026-11-15).
 - [ ] Buying: a harbour that lands slower than a game day at 4x (the game script waits 30 real seconds); buying while the game runs.
 

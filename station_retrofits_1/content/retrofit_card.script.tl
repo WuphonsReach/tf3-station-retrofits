@@ -484,23 +484,24 @@ local bannerStyles : {string : StyleSheet} = nil
 local caution = { 1, 0.769, 0.047 }
 local refusedIcon = "::/game_mechanics/notifications/gui/icons/building_industry_bulldozer.tga"
 -- Worded for any cause: mostly something built next to the station, but a harbour was refused for "Place on Shoreline"
--- (docs/design/findings.md, 2026-11-15), and the card cannot tell which. A line does not wrap: at the default font about 55
--- characters fit beside the icon, and a 66-character line was cut off (2026-11-21), so each line stays at 42 or fewer, with
--- room for a larger font setting.
+-- (docs/design/findings.md, 2026-11-15), and the card cannot tell which. A line does not wrap: about 55 characters fit
+-- beside the icon at Text Scaling "Small" and about 40 at "Large" (a 42-character line was cut off there, 2026-11-21), so
+-- each line stays at 35 or fewer.
 local refusedLines = {
-	"Not rebuilt: the game refused the rebuild.",
+	"Not rebuilt: the game refused it.",
 	"Nothing was charged.",
-	"Clear anything in the way and try again.",
+	"Clear anything in the way, retry.",
 }
 local refusedDownLines = {
-	"Not rebuilt: the game refused the rebuild.",
-	"The level was kept, nothing was refunded.",
-	"Clear anything in the way and try again.",
+	"Not rebuilt: the game refused it.",
+	"The level was kept, no refund.",
+	"Clear anything in the way, retry.",
 }
 -- The dollar of the base task reward notification (mission/notification.script.tl).
 local shortIcon = "::/game_mechanics/notifications/gui/icons/symbol_dollar.tga"
+-- 35 characters a line at most, as for the "Not rebuilt" lines above.
 local shortLines = {
-	"Not bought: not enough money at the time of the buy.",
+	"Not bought: not enough money.",
 	"Nothing was charged.",
 }
 
