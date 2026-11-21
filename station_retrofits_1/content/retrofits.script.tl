@@ -6,7 +6,8 @@
 -- books the price as station construction under the station's carrier; a rebuild that never lands costs nothing. It logs
 -- each buy and its outcome; at logLevel "full" (settings.tl) also the station before the buy and when it lands. Log lines
 -- start with "STATION_RETROFITS". A buy it refuses is kept in its state for the card to read, so the card can tell a buy
--- refused here (short of money) from a rebuild the game refused.
+-- refused here (short of money) from a rebuild the game refused. A rebuild given up as not landed is kept there too (reason
+-- "notLanded"), so the card shows "Not rebuilt" only once nothing can be charged for it.
 --
 -- The same event removes a level: a "to" one below "from" (the card's "<"). No rank or money check; the stored level must
 -- still be the one the card saw, and above 0. The station is rebuilt one level lower, and once that has landed (the stored
@@ -25,9 +26,11 @@ local buyEvent = "stationRetrofitsBuy"
 -- at 4x (Depot Retrofits' findings: 190,000 units took about 3 minutes at 1x, 48 seconds at 4x).
 local dayClock = 4000
 -- A buy is charged when its rebuild lands: the stored level in its tree is at least the one bought, so a later buy landing
--- first also counts. A new buy for the same station before then replaces it, uncharged: the card sends one buy at a time per
--- station and says after a few seconds that the game refused it, so a buy sent again after clearing the way must go
--- through. Both rebuild to the same level from the same stored levels, so at most one is charged. A rebuild that has not
+-- first also counts. While a station's rebuild is pending, a new buy for it replaces it, uncharged, only when it rebuilds the
+-- same tree to the same level the same way (a buy sent again): both rebuild from the same stored levels to the same ones, so
+-- at most one is charged. Any other buy is refused ("pending") until the first has landed or been given up: its rebuild
+-- would start from the levels without the first, so the first landing before it would be undone after being charged, and
+-- a replaced first landing later would give a level uncharged (or remove one without the refund). A rebuild that has not
 -- landed after 30 real seconds is given up, uncharged: the game refused it. The real seconds count while the game is
 -- paused, when game time stands still. Rail and road stations land within a second, harbours in 2 to 3 real seconds
 -- (docs/design/findings.md); Depot Retrofits' 3 seconds would have let a harbour keep a level uncharged, and waiting longer
@@ -54,8 +57,9 @@ local record Refusal
 	click : integer
 	reason : string -- the reason's first word: "noMoney", "rank", "stale" and so on
 end
--- One per station, the newest last; the card looks only for the click it is waiting on.
-local maxRefusals = 16
+-- One per click, the newest last, across all stations: an older click's "notLanded" written in the same update as a new
+-- click's refusal must not replace it. The card looks only for the click it is waiting on, within about 40 seconds.
+local maxRefusals = 32
 
 local record Pending
 	construction : Engine.Entity
@@ -65,6 +69,7 @@ local record Pending
 	untilT : number -- game time after which it is given up, where sentAt is nil
 	sentAt : number -- os.time() when the rebuild was sent; nil where os.time is not available
 	price : integer -- charged when the rebuild lands; for a removal, the refund booked then
+	click : integer -- the card's click, for the "notLanded" verdict; nil from a card without one or a save from before
 	carrier : string -- the finance row's carrier, "ROAD", "TRAM", "RAIL" or "WATER"
 	label : string
 end
@@ -278,25 +283,32 @@ local stillPending = function(p : Pending, t : number) : boolean
 	return not expired(p, t, clockNow()) and not landed(p, storedLevels(p.construction))
 end
 
--- Drops the station's buy that has not landed yet, uncharged, as a new buy for it replaces it.
-local replacePending = function(retrofit : RetrofitState, construction : Engine.Entity, t : number)
-	local kept : {Pending} = {}
+-- The station's rebuild that has not landed yet and is not given up, or nil. Expired ones are left to processPending.
+local pendingFor = function(retrofit : RetrofitState, construction : Engine.Entity, t : number) : Pending
 	for _, p in ipairs(retrofit.pending or {}) do
-		if p.construction == construction and stillPending(p, t) then
-			say("buy notLanded construction=" .. tostring(p.construction) .. " " .. describePending(p) .. " reason=replaced charged=false")
-		else
-			kept[#kept + 1] = p
-		end
+		if p.construction == construction and stillPending(p, t) then return p end
 	end
-	retrofit.pending = kept
+	return nil
 end
 
-local recordRefusal = function(retrofit : RetrofitState, buy : Buy, reason : string)
+-- Drops a pending rebuild, uncharged, as a buy sent again replaces it.
+local dropPending = function(retrofit : RetrofitState, dropped : Pending)
+	local kept : {Pending} = {}
+	for _, p in ipairs(retrofit.pending or {}) do
+		if p ~= dropped then kept[#kept + 1] = p end
+	end
+	retrofit.pending = kept
+	say("buy notLanded construction=" .. tostring(dropped.construction) .. " " .. describePending(dropped) .. " reason=replaced charged=false")
+end
+
+-- Keeps the outcome of a click for the card: the reason the buy was refused here, or "notLanded" for a rebuild given up.
+local recordRefusal = function(retrofit : RetrofitState, construction : Engine.Entity, click : integer, reason : string)
+	if click == nil then return end
 	local kept : {Refusal} = {}
 	for _, r in ipairs(retrofit.refusals or {}) do
-		if r.construction ~= buy.construction then kept[#kept + 1] = r end
+		if r.construction ~= construction or r.click ~= click then kept[#kept + 1] = r end
 	end
-	kept[#kept + 1] = { construction = buy.construction, click = buy.click, reason = reason:match("^%S+") or reason }
+	kept[#kept + 1] = { construction = construction, click = click, reason = reason:match("^%S+") or reason }
 	while #kept > maxRefusals do table.remove(kept, 1) end
 	retrofit.refusals = kept
 end
@@ -338,6 +350,14 @@ local processBuy = function(retrofit : RetrofitState, buy : Buy, t : number) : s
 		return "noMoney balance=" .. tostring(balance) .. " price=" .. tostring(price)
 	end
 
+	local waiting = pendingFor(retrofit, buy.construction, t)
+	if waiting ~= nil then
+		if waiting.tree ~= buy.tree or waiting.level ~= target or (waiting.down or false) ~= down then
+			return "pending waiting=" .. tostring(waiting.label) .. " down=" .. tostring(waiting.down or false)
+		end
+		dropPending(retrofit, waiting)
+	end
+
 	local to = core.withLevel(from, buy.tree, target)
 	local before = logFull and describeStation(buy.construction) or nil
 	local ran, result = sendRebuild(buy.construction, to)
@@ -351,13 +371,14 @@ local processBuy = function(retrofit : RetrofitState, buy : Buy, t : number) : s
 		.. " level=" .. tostring(target) .. amount .. " balanceBefore=" .. tostring(balance)
 		.. " rank=" .. tostring(rank) .. " rankSource=" .. rankSource .. " carrier=" .. carrier .. " carrierSource=" .. carrierSource
 		.. " from=" .. core.describe(from) .. " to=" .. core.describe(to) .. (before ~= nil and (" before " .. before) or ""))
-	replacePending(retrofit, buy.construction, t)
+	retrofit.pending = retrofit.pending or {}
 	table.insert(retrofit.pending, { construction = buy.construction, tree = buy.tree, level = target, down = down or nil,
-		untilT = t + buyPendingClock, sentAt = clockNow(), price = price, carrier = carrier, label = label })
+		untilT = t + buyPendingClock, sentAt = clockNow(), price = price, click = buy.click, carrier = carrier, label = label })
 	return nil
 end
 
--- Charges each buy whose rebuild has landed and gives up the ones that did not land in time; true when the list changed.
+-- Charges each buy whose rebuild has landed and gives up the ones that did not land in time, keeping "notLanded" for the
+-- card; true when the lists changed.
 local processPending = function(retrofit : RetrofitState, t : number) : boolean
 	local changed = false
 	local pending : {Pending} = {}
@@ -375,7 +396,9 @@ local processPending = function(retrofit : RetrofitState, t : number) : boolean
 			changed = true
 			say("buy notLanded construction=" .. tostring(p.construction) .. " " .. describePending(p)
 				.. " seconds=" .. (clock ~= nil and p.sentAt ~= nil and tostring(clock - p.sentAt) or "?") .. " stored=" .. core.describe(stored)
-				.. " expected=" .. tostring(p.tree) .. (p.down and "<=" or ">=") .. tostring(p.level) .. " charged=false")
+				.. " expected=" .. tostring(p.tree) .. (p.down and "<=" or ">=") .. tostring(p.level) .. " charged=false"
+				.. " click=" .. tostring(p.click))
+			recordRefusal(retrofit, p.construction, p.click, "notLanded")
 		else
 			pending[#pending + 1] = p
 		end
@@ -418,7 +441,7 @@ local retrofitScript : GameScript<RetrofitState> = {
 				local reason = ok and refused or ("error " .. tostring(refused))
 				say("buy refused construction=" .. tostring(buy.construction) .. " tree=" .. tostring(buy.tree) .. " from=" .. tostring(buy.from)
 					.. " reason=" .. reason .. " click=" .. tostring(buy.click))
-				if buy.click ~= nil then recordRefusal(retrofit, buy, reason) end
+				recordRefusal(retrofit, buy.construction, buy.click, reason)
 			end
 			state:set(retrofit)
 		end
