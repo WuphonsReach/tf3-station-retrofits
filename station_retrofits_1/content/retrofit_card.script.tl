@@ -167,6 +167,30 @@ local perYear = function(amount : number) : string
 	return money(amount) .. "/" .. _("Year")
 end
 
+-- The game's Text Scaling: 0 Small, 1 Medium, 2 Large. The game's settings page reads it from api.util.getAppConfig() by the
+-- key "fontScaleClass" (gui/menu/settings_page.tl); the type definitions leave the field out, so it is read through a cast.
+-- In game it is a number, and a change in the settings shows at the card's next draw (docs/design/findings.md, 2026-11-21).
+-- Read at each draw of the expanded card. With logLevel "full" each new value is logged, with the Game UI Scaling beside it;
+-- a failed read is logged once and counts as Small.
+local textScaleSeen : string = nil
+local textScale = function() : integer
+	local ok, value, ui = pcall(function() : any, any
+		local config = api.util.getAppConfig() as {string:any}
+		return config.fontScaleClass, config.uiScaling
+	end)
+	local seen = ok and (tostring(value) .. " " .. tostring(ui)) or "error"
+	if seen ~= textScaleSeen then
+		textScaleSeen = seen
+		if not ok then
+			say("card textScaleError error=" .. tostring(value))
+		elseif logFull then
+			say("card textScale fontScaleClass=" .. tostring(value) .. " type=" .. type(value) .. " uiScaling=" .. tostring(ui))
+		end
+	end
+	if not ok or type(value) ~= "number" then return 0 end
+	return math.floor(value as number)
+end
+
 -- A buy is tried, not checked first, as in Depot Retrofits: the click sends it, and the game builds the rebuild or refuses
 -- it (mostly when something built around the station since is in its way; a harbour also for its shoreline). The card
 -- remembers the tree and the level it showed at the click; when that tree goes up (down, for a removal), the buy is done. It
@@ -619,38 +643,57 @@ local boxes = function(s : CardState, level : integer) : {TreeNodeId}
 	return nodes
 end
 
+-- The expanded row's upkeep figure, with the upkeep icon before it. At Text Scaling "Medium" and "Large" the row leaves out the icon, and at
+-- "Large" it writes "/Yr" for "/Year": with both, the catchment row's ">|" ran off the card or came close (findings,
+-- 2026-11-21). Tooltips wrap, so they keep the icon and "/Year".
+local upkeepRow = function(amount : number, scale : integer) : {TreeNodeId}
+	if scale >= 2 then return { text(money(amount) .. "/Yr") } end
+	if scale == 1 then return { text(perYear(amount)) } end
+	return { icon(upkeepIcon), text(perYear(amount)) }
+end
+
 local meters = function(radius : number) : string
 	return grouped(radius) .. " m"
+end
+
+-- The arrow between a value without and with the levels: U+2192 with a space each side. It draws in game, though no base game
+-- text uses it, and is as wide as "->" (docs/design/findings.md, 2026-11-21). The expanded rows leave out the spaces at Text
+-- Scaling "Large" (scale 2, see textScale), for room.
+local arrow = " → "
+local arrowFor = function(scale : integer) : string
+	if scale >= 2 then return "→" end
+	return arrow
 end
 
 local percentAt = function(level : integer) : string
 	return level == 0 and "0%" or ("-" .. tostring(round(level * core.upkeepStep * 100)) .. "%")
 end
 
--- What a tree's levels do now: "200 -> 230 m" (without and with the levels), "-25%"; just the value at level 0 or when the
+-- What a tree's levels do now: "200 → 230 m" (without and with the levels), "-25%"; just the value at level 0 or when the
 -- value without the levels is unknown.
 local effectNow = function(entry : Entry, tree : string) : string
 	local level = entry.levels[tree]
 	if tree == "catchment" then
 		if entry.radius == nil then return "-" end
 		if level == 0 or entry.baseRadius == nil then return meters(entry.radius) end
-		return grouped(entry.baseRadius) .. " -> " .. meters(entry.radius)
+		return grouped(entry.baseRadius) .. arrow .. meters(entry.radius)
 	elseif tree == "upkeep" then
 		return percentAt(level) .. " of total"
 	end
 	return percentAt(level)
 end
 
--- What the next level changes: "230 -> 236 m", "-25% -> -30%"; "?" when the value without the levels is unknown. Short, so
--- the row has room for the upkeep and the buy button: the upkeep row leaves out the summary's "of total", which its tooltip
--- gives.
-local effectNext = function(entry : Entry, tree : string, level : integer) : string
+-- What the next level changes: "230 → 236 m", "-25% → -30%" ("230→236 m" at Text Scaling "Large"); "?" when the value
+-- without the levels is unknown. Short, so the row has room for the upkeep and the buy button: the upkeep row leaves out the
+-- summary's "of total", which its tooltip gives.
+local effectNext = function(entry : Entry, tree : string, level : integer, scale : integer) : string
+	local between = arrowFor(scale)
 	if tree == "catchment" then
 		if entry.radius == nil then return "no circle" end
 		if entry.baseRadius == nil then return "?" end
-		return grouped(core.radius(entry.baseRadius, level - 1)) .. " -> " .. meters(core.radius(entry.baseRadius, level))
+		return grouped(core.radius(entry.baseRadius, level - 1)) .. between .. meters(core.radius(entry.baseRadius, level))
 	end
-	return percentAt(level - 1) .. " -> " .. percentAt(level)
+	return percentAt(level - 1) .. between .. percentAt(level)
 end
 
 local heading = function(s : CardState, entry : Entry, rows : {TreeNodeId})
@@ -816,6 +859,7 @@ end
 -- in one column. The level number is left out; the tooltip gives it.
 local nextRows = function(s : CardState) : {TreeNodeId}
 	local rows : {TreeNodeId} = {}
+	local scale = textScale()
 	for _, entry in ipairs(s.entries) do
 		heading(s, entry, rows)
 		local styles = getDrawnStyles()
@@ -825,10 +869,10 @@ local nextRows = function(s : CardState) : {TreeNodeId}
 			local effect = "Highest level"
 			if level < core.maxLevel then
 				local nextLevel = level + 1
-				effect = effectNext(entry, tree, nextLevel)
+				effect = effectNext(entry, tree, nextLevel, scale)
 				local after = upkeepAt(entry, tree, nextLevel)
 				if after ~= nil then
-					right[1] = builtin.BoxLayout{ orientation = builtin.type.Orientation.Horizontal, children = { icon(upkeepIcon), text(perYear(after)) } }
+					right[1] = builtin.BoxLayout{ orientation = builtin.type.Orientation.Horizontal, children = upkeepRow(after, scale) }
 				else
 					right[1] = text("?")
 				end
