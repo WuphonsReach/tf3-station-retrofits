@@ -10,7 +10,7 @@
 -- script to load, never updateScript.fileName.
 -- Base stations only for now. Log lines start with "STATION_RETROFITS".
 
-local modVersion = "0.1-dev"
+local modVersion = "1.0-dev"
 
 -- The game's date card goes up to the year 5000; a level param available from 9999 never shows in the build menu.
 local hiddenYear = 9999
