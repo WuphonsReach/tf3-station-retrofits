@@ -3,7 +3,7 @@
 ## In short
 
 - **Where it stands.** Levels, the Retrofit card, buying (">" and ">|") and removing a level ("<") all work in game on rail, road, tram, cargo and harbour stations, charged and refunded to the dollar at the prices the formulas give (results in [docs/design/findings.md](docs/design/findings.md)). Configure (the station's module editor) keeps the levels on road, tram, passenger and cargo rail stations, and levelled stations come back as they were when a save is loaded. When the game refuses a rebuild, the card shows "Not rebuilt" and nothing is charged (seen for ">|" buys). Harbours get only the catchment and upkeep trees, and their upkeep tree costs half. TRM: Industry Emissions is fixed in the dev version ([docs/compatibility.md](docs/compatibility.md)). Kerbside stops are out of scope. Airports, airfields, heliports and helipads are next: this mod owns them, hangar depots included (decided 2026-11-16; spec, "Air buildings"). Decisions are in [docs/design/spec.md](docs/design/spec.md), "Decisions".
-- **Next: release 1.0** for rail, road, tram and harbour stations, before air buildings ("Release 1.0" below). The release branch is ready (version 1.0, CHANGELOG dated, cover with "v1.0", checks passing); what is left is merging it, the upload and the published-copy test. Then air buildings: probe 5, the hangar trees' prices and what happens with several hangars, then the card rows and the buy path.
+- **1.0 released** on mod.io (2026-11-21, mod id 6544442; docs/publishing.md, "First upload"). **Next: air buildings**: probe 5, the hangar trees' prices and what happens with several hangars, then the card rows and the buy path.
 
 ## Done
 
@@ -30,13 +30,13 @@ Before the release branch:
 - [x] "Not rebuilt" worded for any cause (2026-11-21): "Not rebuilt: the game refused it.", then "Nothing was charged." or "The level was kept, no refund.", then "Clear anything in the way, retry."; 35 characters a line at most, as about 40 fit at Text Scaling "Large" (findings, 2026-11-21). The "Not bought" note's first line is cut to "Not bought: not enough money." for the same reason. Neither is seen in game yet.
 - [ ] Optional, not for 1.0: in game, the rest (2026-11-21 done: a refused ">" buy on a rail station with the banner after 10 seconds, its retry replacing the pending buy, given up after 30 seconds uncharged; 72 buys and removals on 8 rail and road stations, each charged or refunded once): the 35-character banner fits at Text Scaling "Large", also on a harbour; a refused ">|" buy and a refused removal; a click on another tree while the banner shows, refused as `pending`; a buy at 4x.
 - [x] Gallery (2026-11-21): `2-retrofit-cards.jpg` (a pile of four windows from `tools/gallery/`), `3-not-rebuilt.jpg`, `4-road-station.jpg`, `5-tooltip.jpg` (publishing.md, "Gallery"). From shots of 2026-11-13 and 15, with "->" and the older banner wording.
-- [ ] Gallery, later: a new "Not rebuilt" shot with the current banner lines, at Text Scaling "Small", for the pile's top card (`tools/gallery/rail_not_rebuilt.png`) and `3-not-rebuilt.jpg`, both under new names (publishing.md, "Gallery"). Best sent with a release.
+- [ ] Gallery, later: a new "Not rebuilt" shot with the current banner lines, at Text Scaling "Small", for the pile's top card (`tools/gallery/rail_not_rebuilt.png`) and `3-not-rebuilt.jpg`, both under new names. Candidate: screenshot 20261121_171021 (Liskeard Station, published 1.0, Text Scaling "Small", current lines, catchment circle on the map) (publishing.md, "Gallery"). Best sent with a release.
 
 On the release branch (`<YYYY-MM-DD>-release-1.0`):
 
 - [x] `modVersion = "1.0"`, CHANGELOG entry dated, cover redrawn with `--version 1.0`, `settings.tl` at `"summary"`, all checks and `tl check` passing; `modinfo.json` and the user guide checked against each other and the last findings (2026-11-21: the listing's "Not covered" line now names helipads and the later version, as the guide does).
-- [ ] Merge, upload from `main`, commit `mod.io_fileid.txt`, test the published copy, tag `v1.0` and publish the GitHub release (ask first), record the upload in publishing.md, then `modVersion = "1.1-dev"` and a new CHANGELOG entry.
-- [ ] README: status "released", with the mod.io link.
+- [x] Merged, uploaded from `main` (2f6be05), `mod.io_fileid.txt` committed, published copy tested, upload recorded in publishing.md, `modVersion = "1.1-dev"` and a 1.1 CHANGELOG entry (2026-11-21). Tag `v1.0` on 2f6be05 and the GitHub release published.
+- [x] README: status "released", with the mod.io link.
 
 ## To test in game
 
