@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Transport Fever 3 script mod: stations get levels (catchment radius, pollution, noise, upkeep), bought in the station's window. It is the sibling of Depot Retrofits, the same author's released mod for depots, checked out next to this repo at `../tf3-depot-retrofits` ([WuphonsReach/tf3-depot-retrofits](https://github.com/WuphonsReach/tf3-depot-retrofits), MIT, mod.io id 6495416). This repo starts from that mod's method and code.
 
-**Status: in development, not released.** Levels, the Retrofit card, buying and removing work in game; what is left is in TODO.md. Read these first, in this order:
+**Status: version 1.0 released on mod.io (2026-11-21, mod id 6544442)** for rail, road, tram and harbour stations; air buildings come next. What is left is in TODO.md. Read these first, in this order:
 
 1. [TODO.md](TODO.md): where it stands and what comes next.
 2. [docs/design/findings.md](docs/design/findings.md): what is known about stations, with source files, the unknowns and the in-game test results. Read it before changing mechanics.
@@ -17,7 +17,7 @@ A Transport Fever 3 script mod: stations get levels (catchment radius, pollution
 7. In `../tf3-depot-retrofits`: its `CLAUDE.md` (architecture of the released mod), `docs/design/findings.md` (the tested facts this plan builds on) and `docs/design/spec.md`.
 8. `local/machine.md` (gitignored, may be missing on another machine): the game paths, saves and screenshot folder on this machine.
 
-The repo is public on GitHub ([WuphonsReach/tf3-station-retrofits](https://github.com/WuphonsReach/tf3-station-retrofits), MIT); the mod is not on mod.io yet. `main` takes changes only through a pull request: branch from `origin/main` as `<YYYY-MM-DD>-<slug>`, and push or open a PR only when the user asks.
+The repo is public on GitHub ([WuphonsReach/tf3-station-retrofits](https://github.com/WuphonsReach/tf3-station-retrofits), MIT); the mod is on mod.io as [Station Retrofits](https://mod.io/g/transportfever3/m/station-retrofits) (mod id 6544442; `_metadata/mod.io_fileid.txt` must stay, docs/publishing.md). `main` takes changes only through a pull request: branch from `origin/main` as `<YYYY-MM-DD>-<slug>`, and push or open a PR only when the user asks.
 
 ## CI and repo rules
 

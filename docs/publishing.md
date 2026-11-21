@@ -2,13 +2,13 @@
 
 ## In short
 
-- **Where it is.** Not on mod.io yet. The first upload (1.0) creates the page; until then nothing on this page is tested for this mod. Every step is the one Depot Retrofits used for its first upload and six updates, and Best Before for four uploads (Depot Retrofits' `docs/publishing.md`, which keeps those upload records and the evidence for the rules below).
+- **Where it is.** On mod.io as [Station Retrofits](https://mod.io/g/transportfever3/m/station-retrofits), mod id 6544442, since 1.0 (21 Nov 2026; record at the bottom). The steps are the ones Depot Retrofits used for its first upload and six updates, and Best Before for four uploads (Depot Retrofits' `docs/publishing.md`, which keeps those upload records and the evidence for the rules below).
 - **How it gets there.** Only through the game's own uploader: Mod Hub, My Mods, the mod's dialog. The mod.io website refuses uploads for Transport Fever 3, and the page text changes only through the uploader. The uploader reads the name, summary, description and tags from [modinfo.json](../station_retrofits_1/_metadata/modinfo.json) and the images from `station_retrofits_1/_metadata/`.
 - **The mod id file.** The first upload writes `station_retrofits_1/_metadata/mod.io_fileid.txt` (the mod id). Commit it and never delete it: with it the dialog updates the existing mod, without it the next upload creates a second one.
 - **What ships.** The whole `station_retrofits_1/` folder except `_metadata/`: `mod.json`, `_content.json` and `content/`. The game loads only the files `_content.json` lists, so `python3 tools/check_content_list.py` must pass before an upload.
 - **Images.** `0.jpg` is the cover, and the gallery is `1-cover.jpg` onwards, in file-name order: a number for the place, a name for the picture. `1-cover.jpg` is a copy of the cover, so the gallery opens on it. Every image is 1920x1080. The pictures after it are listed under [Gallery](#gallery).
 - **Version numbers.** mod.io labels every uploaded file "1.0", whatever the mod's number. The number that counts is `modVersion` in [mod.script.tl](../station_retrofits_1/content/mod.script.tl), which the log prints at every load as `STATION_RETROFITS version <number>`, and the matching entry in [CHANGELOG.md](../CHANGELOG.md).
-- **Unknown.** Everything specific to this mod's page: its size, how long the console file takes to show, how the card and summary look in the hub.
+- **Unknown.** How long the console file takes to run in a game; whether an update with one renamed gallery image sends only that image.
 
 ## Releasing a version
 
@@ -64,6 +64,10 @@ From Depot Retrofits' page:
 - **Tiles show the whole 16:9 cover, uncropped.** mod.io's tile adds the author, the summary cut after about 130 characters, the first tag and the size.
 - **Downloads ship without `_metadata`.** The hub builds its page from mod.io's own copy of the text.
 
-## Uploads
+## First upload (1.0, 21 Nov 2026)
 
-None yet.
+- **Dialog.** Validation "No Issues Found", PC and Console, Set Public and Update Metadata, the release note in Changelog; the button read Upload with "A new mod will be created on mod.io". It ran "Validating... Please Wait", then "Uploading... Please Wait"; afterwards the folder button read "Page" (Open Mod Page). Screenshots 20261121_165658 to 165841.
+- **Files.** `mod.io_fileid.txt` appeared with the mod id (6544442); no tracked file changed.
+- **Page.** Public within about four minutes, in the Mod Hub ("retro" finds it beside Depot Retrofits) and on mod.io: the cover, Script Mod tag, description as in `modinfo.json`, ID 6544442, date live Nov 21, 2026. Both files listed at once, each "Version: 1.0" with the release note: Windows, Mac and Linux 34.26 KB, Xbox Series X/S and PlayStation 5 34.37 KB. The hub showed 105.6 KB. Screenshots 20261121_170210 to 170322.
+- **Published copy.** Subscribed in the Mod Hub with the staging link removed: `mods/6544442/` held `mod.json`, `_content.json` and the ten files in `content/`, byte for byte those of `2f6be05`, with no `_metadata`. A load of the "333" save logged `STATION_RETROFITS version 1.0 logLevel=summary`, no `Error while loading game script` and no duplicate of this mod. 39 rebuilds on four stations (three rail, one tram): 29 buys charged and 9 removals refunded once each, and one ">|" buy refused by the game ("Not rebuilt" after 10 seconds, given up after 30, nothing charged). Log `local/logs/2026-11-21-published-stdout.txt`, screenshots 20261121_170916 to 171147.
+- **Tag and release.** `v1.0` is on `2f6be05`, the code that was uploaded; `mod.io_fileid.txt` and this record came after it. GitHub release "v1.0: first release, levels for stations" published from the tag.
