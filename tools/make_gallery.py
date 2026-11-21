@@ -15,8 +15,9 @@ Cards are listed from the bottom of the pile to the top. angle is in degrees (po
 pixels, slot is its place from the left (default: its place in the list). --spacing (pixels between card centres, default
 560) and --card-height (default 880) fit more than three cards. Needs rsvg-convert, for the background.
 
-Depot Retrofits drew its listing's 2-retrofit-tabs.jpg (four windows) with --spacing 465 --card-height 760. Record here the
-command that draws this mod's gallery image once its crops are chosen (docs/publishing.md, "Gallery").
+This mod's 2-retrofit-cards.jpg (four station windows, each cut just above its Statistics section so the cards keep one
+scale; the last shows "Not rebuilt") is drawn from the crops in tools/gallery/ with:
+python3 tools/make_gallery.py --spacing 466 --card-height 590 station_retrofits_1/_metadata/2-retrofit-cards.jpg tools/gallery/road_station.png:2.5:20:0 tools/gallery/rail_station.png:-1:-6:1 tools/gallery/harbour.png:-2:34:2 tools/gallery/rail_not_rebuilt.png:1.5:8:3
 """
 import subprocess
 import sys
