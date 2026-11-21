@@ -429,3 +429,42 @@ The mod.io save "333" (a copy; May 2000, rank 13), logLevel `"full"`, Station Re
 - **A retry replaces the pending buy.** The banner showed 10 seconds after the click (`card notRebuilt waited=10`). Clicked again at once, the same level: the game script dropped the first buy (`buy notLanded ... reason=replaced charged=false`) and sent the retry, which the game refused again; the card showed the banner again 10 seconds later, and the game script gave the retry up 30 seconds after sending it (`buy notLanded seconds=30 stored=0/0/0/0 charged=false`). Nothing was charged.
 - **Text Scaling, after the lines were cut to 42 characters** (log `local/logs/2026-11-21-fontsize-stdout.txt`, 17:16 to 17:18 UTC; Liskeard Station refused pollution 1, banner 10 seconds after the click, given up after 30 seconds, nothing charged). Screenshots 20261121_121738 to 121818: at "Small" (100% UI) the three lines fit with room. At "Large" (100% UI, 121753) the first line, "Not rebuilt: the game refused the rebuild." (42 characters), is cut off at its last letter, so about 40 fit; a smaller window at 121806 has it at the edge. So the lines are now 35 characters at most. In the same shots at "Large", the expanded card's catchment row ("150 -> 155 m", "$1,052,250/Year") pushes its ">|" button off the card, and the other rows nearly touch the edge.
 - **Every click booked once.** 72 rebuilds sent on 8 rail and road stations: 66 buys charged, 4 removals refunded at 80% of the level's price (Fordwich Station, 96135, which then bought the same levels again at the same prices), 2 not landed (above). No buy refused by the game script, so the `pending` refusal was not seen.
+
+### 2026-11-21: Text Scaling read from the settings; "/Yr" at Large; the arrow
+
+Liskeard Station (112652, rail, upkeep $915,000) at level 0, the expanded card, log `local/logs/2026-11-21-arrow2-stdout.txt` (20:54 to 20:56 UTC), screenshots 20261121_155455 to 155644 against 154503 (the build before, at Large).
+
+- **The setting reads.** `api.util.getAppConfig()` works in the card's GUI script. `fontScaleClass` is a number: 2 at "Large", 1 at "Medium", 0 at "Small"; `uiScaling` reads 1, 0.75 or 0.5. A change in the game's settings shows at the card's next draw (`card textScale` lines at 20:54:53, 20:56:10, 20:56:26, 20:56:42). No errors.
+- **"/Yr" at Large, "/Year" otherwise**, as the setting changed (155455 at Large; 155613 Medium, 155628 and 155644 Small).
+- **The arrow draws, at no saving.** "→" (U+2192) renders in the game's font, and "150 → 155 m" is exactly as wide as "150 -> 155 m".
+- **At Large the catchment row is still a little too long.** With "/Yr" its ">|" is back on the card (it was cut off with "/Year"), but its buttons sit about 10 px (of 3840) right of the other rows' column: "/Yr" won about 37 px, the row needed about 47. A station with a larger upkeep (one more digit group, as "$13,000,000") would push ">|" off again.
+- **Medium is tight, Small has room.** At "Medium" the catchment row fits with "/Year" and about one character to spare; at "Small" every row has room.
+
+### 2026-11-21: no upkeep icon at Large
+
+The same station, log `local/logs/2026-11-21-noicon-stdout.txt` (21:12 UTC; `card textScale` 0, then 2, then 2 with `uiScaling=0.5`; no errors), screenshots 20261121_161224 (Small, 100% UI) and 161244 (Large, 50% UI; Game UI Scaling shrinks text and card alike, so the fit is that of 100%).
+
+- **At Large every row's buttons now line up**, with "$1,052,250/Yr" and no icon. The catchment row has about one and a half characters to spare between "155 m" and the figure, so an upkeep two characters longer ("$13,000,000/Yr") would still run over by about half a character.
+- **At Small** the icon and "/Year" show as before, with room.
+
+### 2026-11-21: a big station at Large and Medium
+
+Hannover Station Ost (116227, rail, 8 terminals and 8 circles, upkeep $2,358,400, level 0) on the Deutschland 20 save, log `local/logs/2026-11-21-big-stdout.txt` (21:14 UTC; `card textScale` Large at 50% and 100% UI, Medium, Small at 100% and 50%; no errors), screenshots 20261121_161405 to 161445.
+
+- **Large fits**, with "/Yr" and no icon ("200 → 206 m", "$2,712,160/Yr"): every row's buttons in one column, about one and a half characters to spare on the catchment row, as on Liskeard.
+- **Medium fits with nothing to spare.** With the icon and "/Year", the catchment row's "m" touches the upkeep icon; the buttons still line up.
+- **Small** has room.
+- **Not seen: an eight-digit figure.** The upkeep after a level is seven digits here at level 0. With catchment, pollution and noise at 13 this station's upkeep would be about 4.9 times $2,358,400, about $11.6 million, one digit group longer: that would likely run over at Medium, and only just fit at Large.
+
+### 2026-11-21: eight-digit upkeep at every Text Scaling
+
+The same Hannover Station Ost (116227), with the build that leaves out the icon at Medium and Large and the arrow's spaces at Large. Log `local/logs/2026-11-21-levelled-stdout.txt` (21:25 to 21:26 UTC), screenshots 20261121_162544 to 162640.
+
+- **Three ">|" buys, each charged once:** catchment 0 to 13 ($97,218,675), pollution 0 to 13 ($13,880,248), noise 0 to 13 ($31,729,848), one rebuild each. The upkeep went from $2,358,400 to $11,556,160 a year; the circles from 200 to 278 m.
+- **Every row fits at every Text Scaling**, the buttons in one column (`card textScale` Large, Small, Medium, Medium at 50% UI, Small at 50%, Large at 75%, Large at 100%; no errors):
+  - Large (162640): "278→284 m  $11,909,920/Yr", "-65%→-70%  $11,674,080/Yr", no icon; about one character to spare on the pollution and noise rows, now as long as the catchment row.
+  - Medium (162605): "278 → 284 m  $11,909,920/Year", no icon; about one character to spare.
+  - Small (162556): icon and "/Year", with room.
+- **The collapsed rows** keep the spaced arrow ("200 → 278 m") at Large, with room.
+- **Longer figures** would need a nine-digit upkeep ($100 million a year), about nine times this station's.
+

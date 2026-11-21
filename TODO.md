@@ -44,7 +44,7 @@ On the release branch (`<YYYY-MM-DD>-release-1.0`):
 - [ ] Probe 2 rest: a group of two constructions, next to another mod's card. Done: stations placed in session (2026-11-08).
 - [ ] The levels with the most used competing mods active.
 - [ ] A refused rebuild, the rest: a ">" buy and a removal (removal wording), nothing charged or refunded. Done: two ">|" buys (2026-11-15).
-- [ ] The expanded card at Text Scaling "Large": the catchment row ("150 -> 155 m" and "$1,052,250/Year") pushes its ">|" button off the card, and the other rows nearly touch the edge (findings, 2026-11-21). Fits at "Small". Still to see: a harbour at "Large".
+- [x] The expanded card at every Text Scaling (2026-11-21): the upkeep icon left out at "Medium" and "Large", "/Yr" and an unspaced arrow at "Large"; Hannover Station Ost at catchment, pollution and noise 13 ($11.6 million upkeep) fits at all three sizes with about a character to spare (findings, 2026-11-21). Still to see: a harbour at "Large".
 - [ ] Removing a level, the rest: how the Finances tab shows the positive station construction entry; "<" working above the rank. Done: "<" greyed at level 0 (2026-11-10), a tram station (2026-11-15).
 - [ ] Buying: a harbour that lands slower than a game day at 4x (the game script waits 30 real seconds); buying while the game runs.
 

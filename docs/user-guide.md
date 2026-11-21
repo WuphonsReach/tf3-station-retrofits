@@ -21,8 +21,8 @@ Not covered: airports, airfields, heliports and helipads (planned for a later ve
 
 The card sits in the station's window, above the terminals. It starts collapsed; the station window keeps one card open at a time.
 
-- **Collapsed:** one row per retrofit, with the retrofit's icon, 15 level boxes and, at the right, what the levels do now: "200 -> 230 m" for the largest catchment circle, "-25%" for pollution and noise, "-25% of total" for upkeep. White boxes are levels bought, grey ones levels you can buy at your rank, dark ones levels that need a higher rank.
-- **Expanded:** one line per retrofit: what the next level changes ("200 -> 206 m", "0% -> -5%"), the upkeep after it, and three buttons:
+- **Collapsed:** one row per retrofit, with the retrofit's icon, 15 level boxes and, at the right, what the levels do now: "200 → 230 m" for the largest catchment circle, "-25%" for pollution and noise, "-25% of total" for upkeep. White boxes are levels bought, grey ones levels you can buy at your rank, dark ones levels that need a higher rank.
+- **Expanded:** one line per retrofit: what the next level changes ("200 → 206 m", "0% → -5%"), the upkeep after it (without its icon when the game's Text Scaling is Medium or Large; at Large also "/Yr" for "/Year" and no spaces around the arrow), and three buttons:
   - **<** removes the top level and gives back 80% of what that level costs today.
   - **>** buys the next level.
   - **>|** buys every level your rank and your money allow, in one go. It costs the same as buying those levels one by one.
