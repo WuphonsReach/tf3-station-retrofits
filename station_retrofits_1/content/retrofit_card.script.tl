@@ -168,19 +168,27 @@ local perYear = function(amount : number) : string
 end
 
 -- A buy is tried, not checked first, as in Depot Retrofits: the click sends it, and the game builds the rebuild or refuses
--- it (when something built around the station since is in its way). The card remembers the tree and the level it showed at
--- the click; when that tree has not gone up (down, for a removal) some seconds later, the game refused it (nothing is
--- charged or refunded then), and the card
--- says so until a level lands. It waits for the clicked tree, not for any change: a level of another tree landing just
--- after the click let a second click through, sent with the old level (the game script refused it as stale). A click while it shows keeps the warning up, so a retry the game refuses again does not make it
--- blink; a buy sent again replaces the refused one in the game script. A buy the game script itself refused never reaches the
--- game, so while waiting the card also reads the game script's state for its click: refused there for want of money (the
--- balance can fall between the card's last read and the game script's check), the card says so instead, until the next click,
--- a new level, or once it has shown for about 10 seconds and the money covers the clicked level again (see readShort). Kept
--- per construction for the session, so the warning
--- is still there when the window is opened again. Depot Retrofits also shows what is in the way, with the game's proposal
--- viewer in the window's action area; the station window gives its cards no action area (setActionFn), so the card only
--- says it.
+-- it (mostly when something built around the station since is in its way; a harbour also for its shoreline). The card
+-- remembers the tree and the level it showed at the click; when that tree goes up (down, for a removal), the buy is done. It
+-- waits for the clicked tree, not for any change: a level of another tree landing just after the click let a second click
+-- through, sent with the old level (the game script refused it as stale).
+--
+-- The game gives no word of a refused rebuild: when the clicked tree has not moved about ten seconds after the click, the
+-- card says the station was not rebuilt (nothing is charged or refunded then), until a level lands. The game script waits
+-- longer (30 seconds) before it gives the rebuild up, so a rebuild that landed late would still be charged; the level then
+-- goes up and the banner clears, so the card ends up showing what was charged. No rebuild has landed that late: rail and
+-- road stations land within a second, harbours in 2 to 3 seconds, and an autosave holds up the game script before it sends
+-- the rebuild, not after (docs/design/findings.md, 2026-11-07). A click while the banner shows keeps it up, so a retry the
+-- game refuses again does not make it blink; a retry of the same level replaces the pending one in the game script, and a
+-- buy of another tree is refused there until the first has landed or been given up.
+--
+-- A buy the game script itself refused never reaches the game, and the game script keeps the reason for the click:
+-- refused for want of money (the balance can fall between the card's last read and the game script's check), the card says
+-- so instead, until the next click, a new level, or once it has shown for about 10 seconds and the money covers the clicked
+-- level again (see readShort); other reasons (rank, stale, a rebuild still pending) show nothing. Kept per construction for
+-- the session, so a banner is still there when the window is opened again. Depot Retrofits also shows what is in the way,
+-- with the game's proposal viewer in the window's action area; the station window gives its cards no action area
+-- (setActionFn), so the card only says it.
 local record Try
 	tree : string
 	from : integer -- the tree's level the card showed at the click
@@ -475,13 +483,17 @@ end
 local bannerStyles : {string : StyleSheet} = nil
 local caution = { 1, 0.769, 0.047 }
 local refusedIcon = "::/game_mechanics/notifications/gui/icons/building_industry_bulldozer.tga"
+-- Worded for any cause: mostly something built next to the station, but a harbour was refused for "Place on Shoreline"
+-- (docs/design/findings.md, 2026-11-15), and the card cannot tell which.
 local refusedLines = {
-	"Not rebuilt: a building, road or track is in the way.",
-	"Nothing was charged. Clear it and buy again.",
+	"Not rebuilt: the game refused to rebuild the station.",
+	"Nothing was charged.",
+	"Often a building, road or track is in the way: clear it and retry.",
 }
 local refusedDownLines = {
-	"Not rebuilt: a building, road or track is in the way.",
-	"The level was kept and nothing was refunded. Clear it and try again.",
+	"Not rebuilt: the game refused to rebuild the station.",
+	"The level was kept and nothing was refunded.",
+	"Often a building, road or track is in the way: clear it and retry.",
 }
 -- The dollar of the base task reward notification (mission/notification.script.tl).
 local shortIcon = "::/game_mechanics/notifications/gui/icons/symbol_dollar.tga"

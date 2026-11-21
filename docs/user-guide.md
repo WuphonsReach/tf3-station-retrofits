@@ -6,7 +6,7 @@
 - **Where to buy.** Open the station's window and expand its Retrofit card. Buy the next level, or every level you can in one click. A level can be removed again for 80% of its price.
 - **What it costs.** Levels are priced from what the station would cost to build today, and each level costs more than the one before. Every level except the upkeep levels also raises the station's upkeep.
 - **Limit.** A retrofit's highest level is your company rank, up to 15.
-- **One catch.** Buying or removing a level rebuilds the station. Waiting passengers stay; when something built after the station is in the way, the game refuses the rebuild and nothing is charged.
+- **One catch.** Buying or removing a level rebuilds the station. Waiting passengers stay. When the game cannot rebuild the station, usually because something built after it is in the way, nothing is charged.
 - **Status.** Version 1.0, the first release: train stations, road and tram stations and harbours.
 
 ## Which stations
@@ -35,7 +35,7 @@ The station's own upkeep footer, at the bottom of the window, shows the upkeep n
 - **When the buttons are greyed.** ">" and ">|" are greyed when the next level needs a higher company rank ("Level 8 needs company rank 8." in the tooltip) or you do not have enough money for it. "<" is greyed at level 0. A level above your rank can still be removed.
 - **The price is charged once the rebuild is done**, as station construction: the Finances tab shows it under Investments, Infrastructure. A removal's refund is paid the same way.
 - **Not enough money at the click.** If your money drops below the price just as you click (for example while vehicles are being bought), the level is not bought, nothing is charged, and a yellow note on the card says "Not bought: not enough money". It stays for at least 10 seconds, until you have the money for that level again.
-- **Not rebuilt.** Sometimes the game cannot rebuild the station, usually because something built after it is in the way: a town building on the lot next door, or a road or track rebuilt next to it. Then the level is not bought (or not removed), nothing is charged or given back, and a yellow "Not rebuilt" banner shows on the card. Clear what is in the way and click again; pausing the game first keeps the town from building there again.
+- **Not rebuilt.** Sometimes the game cannot rebuild the station, usually because something built after it is in the way: a town building on the lot next door, or a road or track rebuilt next to it. Then the level is not bought (or not removed), nothing is charged or given back, and about 10 seconds after the click a yellow "Not rebuilt" banner shows on the card. Clear what is in the way and click again; pausing the game first keeps the town from building there again. While the card waits for a station's rebuild, more clicks on that station are ignored.
 - **The refund follows today's price.** A removed level gives back 80% of what it would cost to buy now, not of what you paid. Build prices step up over the decades, so a level bought long ago can give back more than it cost.
 
 ## The four retrofits
