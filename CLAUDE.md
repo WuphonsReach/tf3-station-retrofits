@@ -13,8 +13,9 @@ A Transport Fever 3 script mod: stations get levels (catchment radius, pollution
 3. [docs/design/spec.md](docs/design/spec.md): the levels, prices and card, the decisions and the open ones.
 4. [docs/compatibility.md](docs/compatibility.md): other mods, the TRM: Industry Emissions fix.
 5. [docs/design/probe-plan.md](docs/design/probe-plan.md): the probes that tested the method, and what is left of them.
-6. In `../tf3-depot-retrofits`: its `CLAUDE.md` (architecture of the released mod), `docs/design/findings.md` (the tested facts this plan builds on) and `docs/design/spec.md`.
-7. `local/machine.md` (gitignored, may be missing on another machine): the game paths, saves and screenshot folder on this machine.
+6. [docs/publishing.md](docs/publishing.md) and [CHANGELOG.md](CHANGELOG.md) when preparing a release; [docs/user-guide.md](docs/user-guide.md) and `_metadata/modinfo.json` (the listing) change together.
+7. In `../tf3-depot-retrofits`: its `CLAUDE.md` (architecture of the released mod), `docs/design/findings.md` (the tested facts this plan builds on) and `docs/design/spec.md`.
+8. `local/machine.md` (gitignored, may be missing on another machine): the game paths, saves and screenshot folder on this machine.
 
 The repo is public on GitHub ([WuphonsReach/tf3-station-retrofits](https://github.com/WuphonsReach/tf3-station-retrofits), MIT); the mod is not on mod.io yet. `main` takes changes only through a pull request: branch from `origin/main` as `<YYYY-MM-DD>-<slug>`, and push or open a PR only when the user asks.
 
@@ -48,6 +49,9 @@ tl check station_retrofits_1/content/<file>.tl
 
 # Redraw the mod's cover (station_retrofits_1/_metadata/0.jpg, the uploader's Preview slot, and its copy 1-cover.jpg, the first gallery image; 1920x1080; needs rsvg-convert, Pillow and the Lato font)
 python3 tools/make_preview.py [--version 1.0] [--keep-svg local/preview/cover.svg]   # the version goes in the upper right corner, kept clear for it
+
+# Draw a gallery image from window crops on the cover's background (usage in its docstring)
+python3 tools/make_gallery.py OUT_FILE CARD.png[:angle[:dy[:slot]]] ...
 ```
 
 There is no build step and no unit tests; the only checks are the type checker, the CI checks once they exist, and testing in the game. The user runs every in-game test. Run `tl check` on each script you touch.

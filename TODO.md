@@ -3,7 +3,7 @@
 ## In short
 
 - **Where it stands.** Levels, the Retrofit card, buying (">" and ">|") and removing a level ("<") all work in game on rail, road, tram, cargo and harbour stations, charged and refunded to the dollar at the prices the formulas give (results in [docs/design/findings.md](docs/design/findings.md)). Configure (the station's module editor) keeps the levels on road, tram, passenger and cargo rail stations, and levelled stations come back as they were when a save is loaded. When the game refuses a rebuild, the card shows "Not rebuilt" and nothing is charged (seen for ">|" buys). Harbours get only the catchment and upkeep trees, and their upkeep tree costs half. TRM: Industry Emissions is fixed in the dev version ([docs/compatibility.md](docs/compatibility.md)). Kerbside stops are out of scope. Airports, airfields, heliports and helipads are next: this mod owns them, hangar depots included (decided 2026-11-16; spec, "Air buildings"). Decisions are in [docs/design/spec.md](docs/design/spec.md), "Decisions".
-- **Next.** One in-game session for what is untested (below): an era swap and catenary on a levelled station, a vehicle at a platform during a rebuild, a refused ">" buy and a refused removal, and the levels with the most used competing mods active. Then the code-review fixes, then the user guide, listing and release. Air buildings: probe 5, then decide the hangar trees' prices and what happens with several hangars, then the card rows and the buy path.
+- **Next: release 1.0** for rail, road, tram and harbour stations, before air buildings ("Release 1.0" below). The release docs are in place ([CHANGELOG.md](CHANGELOG.md), [docs/user-guide.md](docs/user-guide.md), [docs/publishing.md](docs/publishing.md)); what blocks it is two code-review fixes, the "Not rebuilt" wording, one in-game session, the gallery, and the upload. Then air buildings: probe 5, the hangar trees' prices and what happens with several hangars, then the card rows and the buy path.
 
 ## Done
 
@@ -19,6 +19,23 @@
 - Waiting passengers survive rebuilds; the emitter refills after a rebuild, how fast does not matter (findings, 2026-11-05).
 - Save and load of levelled stations: three saves loaded with their levels, circles and upkeep as left, and the station script not run on load; Configure on a levelled passenger rail station (findings, 2026-11-10 to 2026-11-13).
 - Refused rebuilds: two ">|" buys refused by the game (a passenger rail station, a harbour), the "Not rebuilt" banner shown, nothing charged; removals on a tram station; 13 levels in one rebuild on rail, road, tram and harbour stations (findings, 2026-11-15).
+
+## Release 1.0
+
+Scope: train stations, road and tram stations and harbours, as the listing and the user guide say. Air buildings come in a later version; the untested items under "To test in game" ship as the listing's "Not checked yet" lines, as in Depot Retrofits 1.0. Steps in [docs/publishing.md](docs/publishing.md), "Releasing a version".
+
+Before the release branch:
+
+- [ ] Code-review fixes 1 and 2 (below, "From the code review"): the card's "Nothing was charged" when a rebuild lands between 10 and 30 seconds and is charged; a pending buy for another tree dropped uncharged. Both are about money shown or charged wrongly.
+- [ ] "Not rebuilt" wording for any cause: the banner says "a building, road or track is in the way", but a harbour was refused for "Place on Shoreline" (findings, 2026-11-15). Word the banner, `modinfo.json` and the user guide to fit both.
+- [ ] One in-game session on the stack, at logLevel "full": the two fixes, a refused ">" buy and a refused removal (removal wording, nothing charged or refunded), a buy while the game runs at 4x.
+- [ ] Gallery: pick the pictures after `1-cover.jpg` from `local/screenshots/` (or shoot the missing ones: its README), crop the windows tight for `tools/make_gallery.py`, write them to `_metadata/` as `<n>-<name>.jpg`, and record the command in that tool's docstring (publishing.md, "Gallery").
+
+On the release branch (`<YYYY-MM-DD>-release-1.0`):
+
+- [ ] `modVersion = "1.0"`, CHANGELOG entry dated, cover redrawn with `--version 1.0`, `settings.tl` at `"summary"`, all checks and `tl check` passing; `modinfo.json` and the user guide checked against each other and the last findings.
+- [ ] Merge, upload from `main`, commit `mod.io_fileid.txt`, test the published copy, tag `v1.0` and publish the GitHub release (ask first), record the upload in publishing.md, then `modVersion = "1.1-dev"` and a new CHANGELOG entry.
+- [ ] README: status "released", with the mod.io link.
 
 ## To test in game
 
@@ -36,6 +53,7 @@
 - [ ] Decide how levels are priced with a mod that scales station upkeep (TRM: Infrastructure Upkeep; spec, "Open decisions").
 - [ ] Survey the stations of the user's subscribed mods (mod.io folder in `local/machine.md`): does each return a `station` table, use `terminateConstructionHook`, set `constructionType`? Read-only for anything not MIT/BSD/Apache/CC0.
 - [ ] Spec: scope for the underground station; whether to look for what a port does emit (spec, "Open decisions").
+- [ ] "Not rebuilt": show what is in the way (the proposal viewer needs an action area the station window does not give its cards; findings). Not for 1.0.
 
 ## Air buildings
 
@@ -44,14 +62,12 @@ Airports, airfields, heliports and helipads, hangar depots included (decided 202
 - [ ] Probe 5: wrap the four air scripts, level the hangar depots in the wrapped hook, see which tabs the window shows and where the card lands.
 - [ ] Decide what the hangar trees' prices are based on, and one set of hangar levels for the whole airport or levels per hangar (spec, open decisions 4 and 5), with what probe 5 shows.
 - [ ] The hangar rows on the card (only where there is a hangar depot), the buy and removal path for the two hangar trees, the carrier for the journal entry (AIR).
-- [ ] The listing's "Not covered" line and the user guide, once air buildings ship.
+- [ ] The listing's "Not covered" line, the user guide's "Which stations" and the CHANGELOG, once air buildings ship.
 - [ ] In-game session: buys and removals on each air building, Configure, era templates, save and load.
-- [ ] "Not rebuilt": show what is in the way (the proposal viewer needs an action area the station window does not give its cards; findings). The banner always says "a building, road or track is in the way", but a harbour was refused for "Place on Shoreline" (findings, 2026-11-15): word the banner and the listing's "Not rebuilt" line for any cause.
-- [ ] User guide, gallery (16 screenshots collected in `local/screenshots/`; still to shoot listed in its README), release process (`docs/publishing.md` from Depot Retrofits). The cover is drawn by `tools/make_preview.py`; the listing text is in `_metadata/modinfo.json` (check its "Not checked yet" and "Not rebuilt" lines against the last tests before release).
 
 ## From the code review (2026-11-03)
 
-Not yet fixed. The first two share a cause (the card guesses the outcome of a buy) and are best fixed together.
+Not yet fixed. The first two block release 1.0 ("Release 1.0" above); they share a cause (the card guesses the outcome of a buy) and are best fixed together.
 
 - [ ] The card's "Not rebuilt… Nothing was charged" comes from its own 10-second wait, while the game script waits 30 seconds and charges a rebuild that lands in that time (`retrofit_card.script.tl`, `readRefused`). Have `processPending` record landed or not landed for each click in state, as `recordRefusal` does, and have the card read that.
 - [ ] `replacePending` drops the station's pending buy uncharged even when the new buy is for another tree (`retrofits.script.tl`). If the earlier rebuild then lands and the game refuses the new one, the station keeps a level it never paid for; a replaced removal that lands later loses its level without the refund. Replace only a pending buy for the same tree and level.
