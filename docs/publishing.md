@@ -6,7 +6,7 @@
 - **How it gets there.** Only through the game's own uploader: Mod Hub, My Mods, the mod's dialog. The mod.io website refuses uploads for Transport Fever 3, and the page text changes only through the uploader. The uploader reads the name, summary, description and tags from [modinfo.json](../station_retrofits_1/_metadata/modinfo.json) and the images from `station_retrofits_1/_metadata/`.
 - **The mod id file.** The first upload writes `station_retrofits_1/_metadata/mod.io_fileid.txt` (the mod id). Commit it and never delete it: with it the dialog updates the existing mod, without it the next upload creates a second one.
 - **What ships.** The whole `station_retrofits_1/` folder except `_metadata/`: `mod.json`, `_content.json` and `content/`. The game loads only the files `_content.json` lists, so `python3 tools/check_content_list.py` must pass before an upload.
-- **Images.** `0.jpg` is the cover, and the gallery is `1-cover.jpg` onwards, in file-name order: a number for the place, a name for the picture. `1-cover.jpg` is a copy of the cover, so the gallery opens on it. Every image is 1920x1080. Which pictures follow the cover is not decided yet (see [Gallery](#gallery)).
+- **Images.** `0.jpg` is the cover, and the gallery is `1-cover.jpg` onwards, in file-name order: a number for the place, a name for the picture. `1-cover.jpg` is a copy of the cover, so the gallery opens on it. Every image is 1920x1080. The pictures after it are listed under [Gallery](#gallery).
 - **Version numbers.** mod.io labels every uploaded file "1.0", whatever the mod's number. The number that counts is `modVersion` in [mod.script.tl](../station_retrofits_1/content/mod.script.tl), which the log prints at every load as `STATION_RETROFITS version <number>`, and the matching entry in [CHANGELOG.md](../CHANGELOG.md).
 - **Unknown.** Everything specific to this mod's page: its size, how long the console file takes to show, how the card and summary look in the hub.
 
@@ -45,7 +45,16 @@ What Depot Retrofits learned (its `docs/publishing.md`, "Gallery"):
 - **An update for the images alone sends the mod file too**, as a new pair of files with the same code. A gallery fix is best sent with a release.
 - **Thumbnails are cropped to 16:9**, so every image is 1920x1080. A game screenshot must leave room above and below the window, or be laid out on the cover's background with `tools/make_gallery.py`. That tool cuts each window along its outline, so its crops must be cut tight to the window: map left below or beside it shows as a strip under the card.
 
-For 1.0, still to decide: which pictures follow `1-cover.jpg`, from the crops in `local/screenshots/` (its README lists what is there and what is still to shoot). A set like Depot Retrofits' would be a pile of Retrofit cards drawn by `make_gallery.py` (a rail, a road and a harbour station, one with "Not rebuilt"), then single shots of a levelled station, the tooltip and the catchment circle before and after.
+The 1.0 gallery, after `1-cover.jpg`:
+
+| File | What it shows | Source |
+|---|---|---|
+| `2-retrofit-cards.jpg` | Four station windows in a pile, drawn by `tools/make_gallery.py` (its docstring has the command): a road station, a cargo rail station, a harbour (two rows) and a passenger rail station with "Not rebuilt" on top. Each window is cut just above its Statistics section, so the cards keep one scale. | Crops in `tools/gallery/`, from shots of 2026-11-15 |
+| `3-not-rebuilt.jpg` | The "Not rebuilt" banner on a passenger rail station, with the station and its tracks on the map. | Screenshot 2026-11-15 05:02, 2560x1440 from the top right, scaled down |
+| `4-road-station.jpg` | A levelled road station (catchment 2, pollution 7, noise 4, upkeep 13) with its catchment area shown on the map. | Screenshot 2026-11-15 05:08, cut the same way |
+| `5-tooltip.jpg` | A row's tooltip: the level, what a level does, the upkeep it adds, the next price and the ">\|" total. | Screenshot 2026-11-13 07:22, the window's top at about full size |
+
+The shots predate the arrow "→" (they show "->") and the shorter banner wording ("Not rebuilt: a building, road or track is in the way."); the arrow is too small a change to reshoot for.
 
 ## Hub search and tiles
 
